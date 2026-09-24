@@ -6,3 +6,8 @@ build
 
 # Ignore Kotlin plugin data
 .kotlin
+
+# IntelliJ IDEA
+.idea/
+*.iml
+out/
