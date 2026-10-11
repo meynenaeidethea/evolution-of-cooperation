@@ -2,8 +2,7 @@ package evolution.game;
 
 public class PrisonersDilemma {
 
-    private PrisonersDilemma() {
-    }
+    private PrisonersDilemma() {}
 
     public static RoundPayoff payoff(Action firstAction, Action secondAction){
         if (firstAction == null || secondAction == null) {

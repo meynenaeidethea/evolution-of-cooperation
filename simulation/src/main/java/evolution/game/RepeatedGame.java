@@ -1,8 +1,5 @@
 package evolution.game;
 
-import javax.xml.stream.events.ProcessingInstruction;
-import java.lang.classfile.attribute.CharacterRangeInfo;
-
 public class RepeatedGame {
 
     private RepeatedGame() {}
@@ -20,7 +17,7 @@ public class RepeatedGame {
         }
 
         Action firstAction = firstGenotype.firstMove();
-        Action secondAction = firstGenotype.firstMove();
+        Action secondAction = secondGenotype.firstMove();
         int firstTotal = 0;
         int secondTotal = 0;
 
