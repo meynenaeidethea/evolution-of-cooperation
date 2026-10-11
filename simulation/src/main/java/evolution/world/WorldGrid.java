@@ -64,7 +64,8 @@ public final class WorldGrid {
     private void requireInsideGrid(CellPosition position) {
         Objects.requireNonNull(position, "Position must be defined");
 
-        if (position.row() < 0 || position.row() >= sideLength) {
+        if (position.row() < 0 || position.row() >= sideLength
+                || position.column() < 0 || position.column() >= sideLength) {
             throw new IllegalArgumentException("Position must be inside the grid");
         }
     }

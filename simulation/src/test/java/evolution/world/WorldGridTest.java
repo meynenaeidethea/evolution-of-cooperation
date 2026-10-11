@@ -68,5 +68,9 @@ class WorldGridTest {
                 IllegalArgumentException.class,
                 () -> grid.placeResource(new CellPosition(3, 0))
         );
+        assertThrows(
+                IllegalArgumentException.class,
+                () -> grid.placeResource(new CellPosition(0, 3))
+        );
     }
 }
