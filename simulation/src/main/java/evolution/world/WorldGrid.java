@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.random.RandomGenerator;
 
 public final class WorldGrid {
 
@@ -59,6 +60,29 @@ public final class WorldGrid {
 
         resources[position.row()][position.column()] = false;
         return true;
+    }
+
+    public void regrowResources(
+            double spawnProbability,
+            RandomGenerator random
+    ) {
+        if (Double.isNaN(spawnProbability)
+                || spawnProbability < 0.0
+                || spawnProbability > 1.0) {
+            throw new IllegalArgumentException(
+                    "Resource spawn probability must be between 0 and 1"
+            );
+        }
+
+        Objects.requireNonNull(random, "Random generator must be defined");
+
+        for (int row = 0; row < sideLength; row++) {
+            for (int column = 0; column < sideLength; column++) {
+                if (!resources[row][column] && random.nextDouble() < spawnProbability) {
+                    resources[row][column] = true;
+                }
+            }
+        }
     }
 
     private void requireInsideGrid(CellPosition position) {
