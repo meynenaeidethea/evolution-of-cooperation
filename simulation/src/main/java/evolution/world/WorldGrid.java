@@ -1,8 +1,11 @@
 package evolution.world;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Objects;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Optional;
 import java.util.random.RandomGenerator;
 
@@ -39,6 +42,44 @@ public final class WorldGrid {
     public Optional<Agent> agentAt(CellPosition position) {
         requireInsideGrid(position);
         return Optional.ofNullable(agentsByPosition.get(position));
+    }
+
+    public List<Agent> livingAgents() {
+        return agentsByPosition.values().stream()
+                .filter(Agent::isAlive)
+                .sorted(Comparator.comparingLong(Agent::agentId))
+                .toList();
+    }
+
+    public List<CellPosition> availableMoveTargets(Agent agent) {
+        Objects.requireNonNull(agent, "Agent must be defined");
+
+        if (agentsByPosition.get(agent.position()) != agent) {
+            throw new IllegalArgumentException("Agent must be placed on this grid");
+        }
+
+        List<CellPosition> targets = new ArrayList<>();
+        targets.add(agent.position());
+
+        for (int rowDelta = -1; rowDelta <= 1; rowDelta++) {
+            for (int columnDelta = -1; columnDelta <= 1; columnDelta++) {
+                if (rowDelta == 0 && columnDelta == 0) {
+                    continue;
+                }
+
+                CellPosition target = agent.position().moveBy(
+                        rowDelta,
+                        columnDelta,
+                        sideLength
+                );
+
+                if (!agentsByPosition.containsKey(target)) {
+                    targets.add(target);
+                }
+            }
+        }
+
+        return List.copyOf(targets);
     }
 
     public void placeResource(CellPosition position) {

@@ -113,6 +113,32 @@ class WorldGridTest {
         );
     }
 
+    @Test
+    void offersOnlyFreeToroidalNeighboursAndStayingInPlace() {
+        WorldGrid grid = new WorldGrid(3);
+        Agent agent = new Agent(
+                1,
+                new CellPosition(0, 0),
+                1_000,
+                ALWAYS_COOPERATE
+        );
+        Agent blockingAgent = new Agent(
+                2,
+                new CellPosition(2, 2),
+                1_000,
+                ALWAYS_COOPERATE
+        );
+
+        grid.placeAgent(agent);
+        grid.placeAgent(blockingAgent);
+
+        var targets = grid.availableMoveTargets(agent);
+
+        assertTrue(targets.contains(new CellPosition(0, 0)));
+        assertFalse(targets.contains(new CellPosition(2, 2)));
+        assertEquals(8, targets.size());
+    }
+
     private RandomGenerator randomWithSeed(long seed) {
         return RandomGeneratorFactory
                 .of("L64X128MixRandom")
