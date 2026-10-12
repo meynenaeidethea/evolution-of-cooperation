@@ -53,6 +53,32 @@ public final class WorldGrid {
                 .toList();
     }
 
+    public List<Agent> livingNeighbours(Agent agent) {
+        Objects.requireNonNull(agent, "Agent must be defined");
+
+        if (agentsByPosition.get(agent.position()) != agent) {
+            throw new IllegalArgumentException("Agent must be placed on this grid");
+        }
+
+        List<Agent> neighbours = new ArrayList<>();
+        for (int rowDelta = -1; rowDelta <= 1; rowDelta++) {
+            for (int columnDelta = -1; columnDelta <= 1; columnDelta++) {
+                if (rowDelta == 0 && columnDelta == 0) {
+                    continue;
+                }
+
+                CellPosition position = agent.position().moveBy(
+                        rowDelta, columnDelta, sideLength
+                );
+                Agent neighbour = agentsByPosition.get(position);
+                if (neighbour != null && neighbour.isAlive()) {
+                    neighbours.add(neighbour);
+                }
+            }
+        }
+        return List.copyOf(neighbours);
+    }
+
     public List<CellPosition> availableMoveTargets(Agent agent) {
         Objects.requireNonNull(agent, "Agent must be defined");
 
@@ -124,6 +150,25 @@ public final class WorldGrid {
         }
 
 
+    }
+
+    public void removeAgent(Agent agent) {
+        Objects.requireNonNull(agent, "Agent must be defined");
+        if (!agentsByPosition.remove(agent.position(), agent)) {
+            throw new IllegalArgumentException("Agent must be placed on this grid");
+        }
+    }
+
+    public void clearAgents() {
+        agentsByPosition.clear();
+    }
+
+    public void clearResources() {
+        for (int row = 0; row < sideLength; row++) {
+            for (int column = 0; column < sideLength; column++) {
+                resources[row][column] = false;
+            }
+        }
     }
 
     public void placeResource(CellPosition position) {
