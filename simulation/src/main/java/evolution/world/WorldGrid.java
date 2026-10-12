@@ -7,6 +7,8 @@ import java.util.Objects;
 import java.util.Map;
 import java.util.HashMap;
 import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.random.RandomGenerator;
 
 public final class WorldGrid {
@@ -80,6 +82,48 @@ public final class WorldGrid {
         }
 
         return List.copyOf(targets);
+    }
+
+    public void moveAgents(Map<Agent, CellPosition> moves) {
+        Objects.requireNonNull(moves, "Moves must be defined");
+        Set<CellPosition> destinations = new HashSet<>();
+
+        for (Map.Entry<Agent, CellPosition> move : moves.entrySet()) {
+            Agent agent = Objects.requireNonNull(move.getKey(), "Agent must be defined");
+            CellPosition target = Objects.requireNonNull(move.getValue(), "Target must be defined");
+
+            if (!agent.isAlive()) {
+                throw new IllegalArgumentException("Dead agent cannot move");
+            }
+            if (agentsByPosition.get(agent.position()) != agent) {
+                throw new IllegalArgumentException("Agent must be placed on this grid");
+            }
+
+            requireInsideGrid(target);
+
+            if (!destinations.add(target)) {
+                throw new IllegalArgumentException("Multiple agents cannot move to the same cell");
+            }
+
+            Agent initialOccupant = agentsByPosition.get(target);
+            if (initialOccupant != null && initialOccupant != agent) {
+                throw new IllegalArgumentException("Agent cannot move into a cell occupied at phase start");
+            }
+        }
+
+        for (Agent agent : moves.keySet()) {
+            agentsByPosition.remove(agent.position(), agent);
+        }
+
+        for (Map.Entry<Agent, CellPosition> move : moves.entrySet()) {
+            Agent agent = move.getKey();
+            CellPosition target = move.getValue();
+
+            agent.moveTo(target);
+            agentsByPosition.put(target, agent);
+        }
+
+
     }
 
     public void placeResource(CellPosition position) {
