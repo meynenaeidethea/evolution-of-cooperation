@@ -6,6 +6,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class CsvResultsWriterTest {
@@ -23,5 +24,9 @@ class CsvResultsWriterTest {
         assertTrue(Files.exists(directory.resolve("runs.csv")));
         assertTrue(Files.exists(directory.resolve("generations.csv")));
         assertTrue(Files.exists(directory.resolve("genotype-frequencies.csv")));
+        assertEquals(
+                33,
+                Files.readAllLines(directory.resolve("genotype-frequencies.csv")).size()
+        );
     }
 }

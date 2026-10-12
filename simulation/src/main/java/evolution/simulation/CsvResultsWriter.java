@@ -51,15 +51,28 @@ public final class CsvResultsWriter {
         rows.add("seed,generation,genotype,count,frequency");
         for (SimulationRunResult run : runs) {
             for (GenerationMetrics metric : run.generations()) {
-                for (var entry : metric.genotypeCounts().entrySet()) {
+                for (String genotype : allGenotypes()) {
+                    int count = metric.genotypeCounts().getOrDefault(genotype, 0);
                     double frequency = metric.livingAgents() == 0 ? Double.NaN
-                            : (double) entry.getValue() / metric.livingAgents();
-                    rows.add(run.seed() + "," + metric.generation() + "," + entry.getKey()
-                            + "," + entry.getValue() + "," + value(frequency));
+                            : (double) count / metric.livingAgents();
+                    rows.add(run.seed() + "," + metric.generation() + "," + genotype
+                            + "," + count + "," + value(frequency));
                 }
             }
         }
         Files.write(file, rows, StandardCharsets.UTF_8);
+    }
+
+    private static List<String> allGenotypes() {
+        List<String> genotypes = new ArrayList<>(32);
+        for (int bits = 0; bits < 32; bits++) {
+            StringBuilder genotype = new StringBuilder(5);
+            for (int gene = 4; gene >= 0; gene--) {
+                genotype.append((bits & (1 << gene)) == 0 ? 'C' : 'D');
+            }
+            genotypes.add(genotype.toString());
+        }
+        return genotypes;
     }
 
     private static String value(double number) {
