@@ -51,6 +51,14 @@
 
 ## Серии экспериментов
 
+Готовую серию можно превратить в автономный HTML-отчёт с графиками и доверительными интервалами:
+
+```sh
+./gradlew :simulation:analyzeExperiments --args='--input results/experiments/<каталог-серии>'
+```
+
+Методы, ограничения и файлы отчёта описаны в [документации анализа](docs/results-analysis.md).
+
 Класс `evolution.experiment.ExperimentMain` запускает сравнения параметров, не меняя `SimulationConfig.baseline()`. Без аргументов выполняются 30 повторов базовой конфигурации. В IntelliJ запустите его `public static void main`; параметры серии задаются в **Program arguments**, например `--series rounds`.
 
 В терминале сначала можно посмотреть полный план без расчёта:

@@ -16,6 +16,7 @@ repositories {
 }
 
 dependencies {
+    implementation("org.knowm.xchart:xchart:4.0.4")
     // Explicit platform artifacts keep the non-modular IntelliJ main launch self-contained.
     val os = providers.systemProperty("os.name").get().lowercase()
     val arch = providers.systemProperty("os.arch").get().lowercase()
@@ -58,6 +59,16 @@ tasks.register<JavaExec>("runExperiments") {
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(25)
     }
+}
+
+tasks.register<JavaExec>("analyzeExperiments") {
+    group = "application"
+    description = "Analyze saved experiment CSV (use --args='--help')"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.analysis.AnalysisMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
+    javaLauncher = javaToolchains.launcherFor { languageVersion = JavaLanguageVersion.of(25) }
+    jvmArgs("-Djava.awt.headless=true")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
