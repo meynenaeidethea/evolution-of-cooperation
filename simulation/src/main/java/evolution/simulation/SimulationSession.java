@@ -14,6 +14,8 @@ import java.util.random.RandomGeneratorFactory;
 
 /** A forward-only run that owns its mutable world and exposes only detached snapshots. */
 public final class SimulationSession {
+    public static final String MODEL_VERSION = "genetic-v1";
+    public static final String RANDOM_GENERATOR = "L64X128MixRandom";
     private final SimulationConfig config;
     private final long seed;
     private final RandomGenerator random;
@@ -32,7 +34,7 @@ public final class SimulationSession {
     public SimulationSession(SimulationConfig config, long seed) {
         this.config = Objects.requireNonNull(config);
         this.seed = seed;
-        random = RandomGeneratorFactory.of("L64X128MixRandom").create(seed);
+        random = RandomGeneratorFactory.of(RANDOM_GENERATOR).create(seed);
         grid = new WorldGrid(config.sideLength());
         nextAgentId = phases.createInitialPopulation(grid, config, random, 1L);
     }
