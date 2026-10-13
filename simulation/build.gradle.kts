@@ -16,10 +16,37 @@ repositories {
 }
 
 dependencies {
+    // Explicit platform artifacts keep the non-modular IntelliJ main launch self-contained.
+    val os = providers.systemProperty("os.name").get().lowercase()
+    val arch = providers.systemProperty("os.arch").get().lowercase()
+    val arm = arch == "aarch64" || arch == "arm64"
+    val platform = when {
+        os.contains("linux") -> if (arm) "linux-aarch64" else "linux"
+        os.contains("mac") -> if (arm) "mac-aarch64" else "mac"
+        os.contains("windows") && !arm -> "win"
+        else -> error("Unsupported JavaFX platform: $os / $arch")
+    }
+    for (module in listOf("base", "graphics", "controls")) {
+        implementation("org.openjfx:javafx-$module:25.0.2:$platform") {
+            isTransitive = false
+        }
+    }
+
     // Use JUnit Jupiter for testing.
     testImplementation(libs.junit.jupiter)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
+}
+
+tasks.register<JavaExec>("runVisual") {
+    group = "application"
+    description = "Open the interactive simulation window"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.ui.SimulationVisualMain"
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+    jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
