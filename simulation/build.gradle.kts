@@ -49,6 +49,17 @@ tasks.register<JavaExec>("runVisual") {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
+tasks.register<JavaExec>("runExperiments") {
+    group = "application"
+    description = "Run reproducible experiment series (use --args='--help' for options)"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.experiment.ExperimentMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
 // Apply a specific Java toolchain to ease working on different environments.
 java {
     toolchain {
