@@ -2,6 +2,8 @@ package evolution.experiment;
 
 import evolution.simulation.SimulationConfig;
 import evolution.simulation.SimulationRunner;
+import evolution.simulation.PairingMode;
+import evolution.analysis.SeriesAnalysis;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
@@ -19,6 +21,24 @@ class ExperimentSeriesRunnerTest {
             0.3, 20, 0.8, 0.01, 3, 2);
     private final List<ExperimentScenario> scenarios = List.of(new ExperimentScenario("baseline", config),
             new ExperimentScenario("comparison", config));
+
+    @Test
+    void localityChangesOnlyPartnerChoiceAndRecordsItInCsv() throws Exception {
+        var plan = ExperimentPlan.scenarios(config, ExperimentPlan.Series.LOCALITY);
+        assertEquals(2, plan.size());
+        assertSame(config, plan.getFirst().config());
+        assertSame(config, plan.getLast().config());
+        assertEquals(PairingMode.LOCAL, plan.getFirst().pairingMode());
+        assertEquals(PairingMode.GLOBAL, plan.getLast().pairingMode());
+        var output = directory.resolve("locality");
+        var runs = new ExperimentSeriesRunner().run(plan, 2, output, update -> {});
+        assertEquals(PairingMode.GLOBAL, runs.getLast().result().pairingMode());
+        assertTrue(Files.readString(output.resolve("runs.csv")).contains("pairing_mode"));
+        var analysis = SeriesAnalysis.read(output);
+        assertEquals("local", analysis.scenarios().getFirst().runs().getFirst().metadata().get("pairing_mode"));
+        assertEquals("global", analysis.scenarios().getLast().runs().getFirst().metadata().get("pairing_mode"));
+        assertEquals(2, analysis.effects().getFirst().survival().n());
+    }
 
     @Test
     void usesSameSeedSetForEveryScenarioAndReportsProgress() throws Exception {

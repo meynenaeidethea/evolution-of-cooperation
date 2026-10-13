@@ -42,7 +42,7 @@ public final class ExperimentSeriesRunner {
             var scenarioResults = new ArrayList<ExperimentRun>();
             for (int index = 0; index < repetitions; index++) {
                 int repetition = index + 1;
-                var result = runner.run(scenario.config(), repetition);
+                var result = runner.run(scenario.config(), repetition, scenario.pairingMode());
                 var experiment = new ExperimentRun(scenario.id(), repetition, result);
                 scenarioResults.add(experiment);
                 results.add(experiment);

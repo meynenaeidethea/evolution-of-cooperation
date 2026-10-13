@@ -59,6 +59,9 @@ public final class SeriesAnalysis {
                 throw new IOException("Runs must have a common positive generation horizon and positive populations");
             }
             if (!List.of("completed", "extinct").contains(row.get("status"))) throw new IOException("Unknown run status: " + key);
+            if (row.containsKey("pairing_mode") && !List.of("local", "global").contains(row.get("pairing_mode"))) {
+                throw new IOException("Unknown pairing mode: " + key);
+            }
             histories.put(key, new TreeMap<>());
         }
         for (var row : generations.rows()) {

@@ -33,6 +33,7 @@ CsvResultsWriter.writeExperiments(directory, List.of(
 | `crossover_probability`, `mutation_probability`, `tournament_size` | `pc`, `pm`, размер турнира |
 | `model_version`, `random_generator`, `java_version` | Версия правил `genetic-v1`, фактически используемый генератор `L64X128MixRandom`, версия Java при расчёте |
 | `extinct`, `extinction_generation` | Факт вымирания и номер поколения; номер пустой для завершённого запуска |
+| `pairing_mode` | `local` — базовые пары из соседей; `global` — экспериментальный случайный партнёр из всей живой популяции. Последний столбец; в старых результатах отсутствует (локальный режим) |
 
 Версия модели относится к правилам, а не к параметрам сценария. Изменение параметров не меняет `model_version`; полная конфигурация сохраняется в той же строке. Сведения о среде записываются в `SimulationRunResult` и сохраняются при последующем экспорте результата.
 

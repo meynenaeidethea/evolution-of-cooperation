@@ -17,6 +17,7 @@ public final class SimulationSession {
     public static final String MODEL_VERSION = "genetic-v1";
     public static final String RANDOM_GENERATOR = "L64X128MixRandom";
     private final SimulationConfig config;
+    private final PairingMode pairingMode;
     private final long seed;
     private final RandomGenerator random;
     private final WorldGrid grid;
@@ -32,7 +33,12 @@ public final class SimulationSession {
     private String status = "running";
 
     public SimulationSession(SimulationConfig config, long seed) {
+        this(config, seed, PairingMode.LOCAL);
+    }
+
+    public SimulationSession(SimulationConfig config, long seed, PairingMode pairingMode) {
         this.config = Objects.requireNonNull(config);
+        this.pairingMode = Objects.requireNonNull(pairingMode);
         this.seed = seed;
         random = RandomGeneratorFactory.of(RANDOM_GENERATOR).create(seed);
         grid = new WorldGrid(config.sideLength());
@@ -62,7 +68,7 @@ public final class SimulationSession {
         Map<Agent, Integer> resources = EnergyPhase.collectResourceEnergy(
                 grid, config.resourceEnergyHundredths());
         resourceEnergy += resources.values().stream().mapToLong(Integer::longValue).sum();
-        var games = phases.playPairs(grid, config, random);
+        var games = phases.playPairs(grid, config, random, pairingMode);
         gamePayoff += games.payoffs().values().stream().mapToLong(Integer::longValue).sum();
         gameStatistics = gameStatistics.plus(games.statistics());
         EnergyPhase.applyEnergyAndRemoveDead(grid, resources, games.payoffs(), config);
@@ -107,6 +113,7 @@ public final class SimulationSession {
         if (!isFinished()) {
             throw new IllegalStateException("Run is not finished");
         }
-        return new SimulationRunResult(config, seed, status, List.copyOf(metrics));
+        return new SimulationRunResult(config, seed, status, List.copyOf(metrics), MODEL_VERSION,
+                RANDOM_GENERATOR, Runtime.version().toString(), pairingMode);
     }
 }

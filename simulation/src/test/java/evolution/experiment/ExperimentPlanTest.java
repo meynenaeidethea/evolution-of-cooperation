@@ -1,6 +1,7 @@
 package evolution.experiment;
 
 import evolution.simulation.SimulationConfig;
+import evolution.simulation.PairingMode;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -36,6 +37,7 @@ class ExperimentPlanTest {
                 if (base.mutationProbability() != config.mutationProbability()) differences++;
                 if (base.resourceSpawnProbability() != config.resourceSpawnProbability()) differences++;
                 if (base.resourceEnergyHundredths() != config.resourceEnergyHundredths()) differences++;
+                if (scenario.pairingMode() != PairingMode.LOCAL) differences++;
                 assertEquals(1, differences, scenario.id());
             }
         }
@@ -60,10 +62,10 @@ class ExperimentPlanTest {
         var reference = new SimulationConfig(3, 4, 2, 5, 1000, 400, 100,
                 0.1, 20, 0.8, 0.01, 3, 2);
         var all = ExperimentPlan.scenarios(reference, ExperimentPlan.Series.ALL);
-        assertEquals(17, all.size());
-        assertEquals(1, all.stream().filter(s -> s.config().equals(reference)).count());
+        assertEquals(18, all.size());
+        assertEquals(1, all.stream().filter(s -> s.config().equals(reference) && s.pairingMode() == PairingMode.LOCAL).count());
         assertEquals(all.size(), all.stream().map(ExperimentScenario::id).distinct().count());
-        assertEquals(all.size(), all.stream().map(ExperimentScenario::config).distinct().count());
+        assertEquals(all.size() - 1, all.stream().map(ExperimentScenario::config).distinct().count());
         assertEquals(all, ExperimentPlan.scenarios(reference, ExperimentPlan.Series.ALL));
         assertThrows(UnsupportedOperationException.class, all::clear);
     }
@@ -71,7 +73,7 @@ class ExperimentPlanTest {
     @Test
     void acceptsOnlyKnownSeriesAndSafeScenarioIds() {
         for (var series : ExperimentPlan.Series.values()) assertEquals(series, ExperimentPlan.Series.parse(series.option()));
-        assertThrows(IllegalArgumentException.class, () -> ExperimentPlan.Series.parse("locality"));
+        assertThrows(IllegalArgumentException.class, () -> ExperimentPlan.Series.parse("unknown"));
         assertThrows(IllegalArgumentException.class, () -> new ExperimentScenario("../results", base));
         assertThrows(IllegalArgumentException.class, () -> new ExperimentScenario("", base));
         assertEquals(List.of(new ExperimentScenario("baseline", base)), ExperimentPlan.scenarios(base, ExperimentPlan.Series.BASELINE));

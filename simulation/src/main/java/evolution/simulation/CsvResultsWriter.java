@@ -46,7 +46,7 @@ public final class CsvResultsWriter {
                     + "scenario_id,repetition,ticks_per_generation,rounds_per_match,initial_energy_hundredths,"
                     + "resource_energy_hundredths,living_cost_hundredths,resource_spawn_probability,"
                     + "game_payoff_weight_hundredths,crossover_probability,mutation_probability,tournament_size,"
-                    + "model_version,random_generator,java_version,extinct,extinction_generation");
+                    + "model_version,random_generator,java_version,extinct,extinction_generation,pairing_mode");
             for (var experiment : runs) {
                 var run = experiment.result();
                 var config = run.config();
@@ -59,7 +59,7 @@ public final class CsvResultsWriter {
                         config.gamePayoffWeightHundredths(), config.crossoverProbability(),
                         config.mutationProbability(), config.tournamentSize(), run.modelVersion(),
                         run.randomGenerator(), run.javaVersion(), extinct,
-                        extinct ? run.generations().getLast().generation() : null));
+                        extinct ? run.generations().getLast().generation() : null, run.pairingMode().csvValue()));
             }
         }
     }

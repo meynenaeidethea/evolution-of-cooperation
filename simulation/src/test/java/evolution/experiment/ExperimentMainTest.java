@@ -34,7 +34,7 @@ class ExperimentMainTest {
         assertEquals(2, options.repetitions());
         assertTrue(options.listOnly());
         assertEquals(directory.resolve("series"), options.outputDirectory());
-        for (String[] args : new String[][]{{"--unknown"}, {"--series"}, {"--series", "locality"},
+        for (String[] args : new String[][]{{"--unknown"}, {"--series"}, {"--series", "unknown"},
                 {"--repetitions", "0"}, {"--repetitions", "-1"}, {"--repetitions", "abc"},
                 {"--repetitions", "2147483648"}, {"--output", ""}, {"--series", "--list"},
                 {"--list", "--list"}, {"--series", "rounds", "--series", "mutation"}}) {
@@ -46,8 +46,8 @@ class ExperimentMainTest {
     void previewAndHelpDoNotCreateOutputOrRunSimulations() throws Exception {
         Path target = directory.resolve("preview");
         String preview = execute("--series", "all", "--output", target.toString(), "--list");
-        assertTrue(preview.contains("Сценариев: 17"));
-        assertTrue(preview.contains("Всего запусков: 510"));
+        assertTrue(preview.contains("Сценариев: 18"));
+        assertTrue(preview.contains("Всего запусков: 540"));
         assertTrue(preview.contains("seed = номер повтора: 1…30"));
         assertTrue(preview.contains("ticksPerGeneration=1"));
         assertFalse(preview.contains("[1/"));

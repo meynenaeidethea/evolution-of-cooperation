@@ -1,6 +1,7 @@
 package evolution.experiment;
 
 import evolution.simulation.SimulationConfig;
+import evolution.simulation.PairingMode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +13,7 @@ public final class ExperimentPlan {
     private ExperimentPlan() {}
 
     public enum Series {
-        BASELINE, ROUNDS, GAME_WEIGHT, MUTATION, RESOURCE_SPAWN, RESOURCE_ENERGY, ALL;
+        BASELINE, ROUNDS, GAME_WEIGHT, MUTATION, RESOURCE_SPAWN, RESOURCE_ENERGY, LOCALITY, ALL;
 
         public String option() {
             return name().toLowerCase(Locale.ROOT).replace('_', '-');
@@ -65,6 +66,9 @@ public final class ExperimentPlan {
                         copy(baseline, baseline.roundsPerMatch(), baseline.gamePayoffWeightHundredths(),
                                 baseline.mutationProbability(), baseline.resourceSpawnProbability(), value));
             }
+        }
+        if (series == Series.LOCALITY || series == Series.ALL) {
+            scenarios.add(new ExperimentScenario("pairing-global", baseline, PairingMode.GLOBAL));
         }
         return List.copyOf(scenarios);
     }

@@ -15,7 +15,11 @@ import java.util.random.RandomGenerator;
 public final class SimulationRunner {
 
     public SimulationRunResult run(SimulationConfig config, long seed) {
-        SimulationSession session = new SimulationSession(config, seed);
+        return run(config, seed, PairingMode.LOCAL);
+    }
+
+    public SimulationRunResult run(SimulationConfig config, long seed, PairingMode mode) {
+        SimulationSession session = new SimulationSession(config, seed, mode);
         while (!session.isFinished()) {
             session.advance();
         }
@@ -61,9 +65,13 @@ public final class SimulationRunner {
     TickGameResult playPairs(
             WorldGrid grid, SimulationConfig config, RandomGenerator random
     ) {
+        return playPairs(grid, config, random, PairingMode.LOCAL);
+    }
+
+    TickGameResult playPairs(WorldGrid grid, SimulationConfig config, RandomGenerator random, PairingMode mode) {
         Map<Agent, Integer> payoffs = new LinkedHashMap<>();
         GameStatistics statistics = GameStatistics.EMPTY;
-        for (AgentPair pair : PairingPhase.formPairs(grid, random)) {
+        for (AgentPair pair : PairingPhase.formPairs(grid, random, mode)) {
             var match = RepeatedGame.playDetailed(
                     pair.first().genotype(), pair.second().genotype(), config.roundsPerMatch()
             );

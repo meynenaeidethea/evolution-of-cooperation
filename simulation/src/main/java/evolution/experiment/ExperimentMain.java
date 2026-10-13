@@ -36,7 +36,7 @@ public final class ExperimentMain {
                 options.series().option(), scenarios.size(), options.repetitions(),
                 (long) scenarios.size() * options.repetitions());
         output.printf(Locale.ROOT, "Для каждого сценария seed = номер повтора: 1…%d.%n", options.repetitions());
-        for (var scenario : scenarios) output.println(scenario.id() + ": " + scenario.config());
+        for (var scenario : scenarios) output.println(scenario.id() + ": " + scenario.config() + ", pairing=" + scenario.pairingMode().csvValue());
         if (options.repetitions() < ExperimentSeriesRunner.DEFAULT_REPETITIONS) {
             output.println("Это проверочная серия: план исследования требует минимум 30 повторов на сценарий.");
         }
