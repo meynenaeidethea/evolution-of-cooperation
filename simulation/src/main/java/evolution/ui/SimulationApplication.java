@@ -199,6 +199,8 @@ public final class SimulationApplication extends Application {
     private void refresh() {
         var snapshot = history.currentSnapshot();
         var values = snapshot.metrics();
+        var generation = values.generationMetrics();
+        var games = generation.gameStatistics();
         world.show(snapshot);
         heading.setText("Поколение " + snapshot.generation() + " / " + config.maximumGenerations()
                 + "   ·   Такт " + snapshot.tick() + " / " + config.ticksPerGeneration());
@@ -208,10 +210,16 @@ public final class SimulationApplication extends Application {
             default -> "В процессе";
         };
         metrics.setText("Живых агентов: " + values.livingAgents()
+                + "\nВыживаемость: " + percentage(generation.survivalFraction())
                 + "\nСредняя энергия: " + energy(values.averageEnergyHundredths())
+                + "\nМаксимальная энергия: " + energy(generation.maximumEnergyHundredths())
                 + "\nРесурсов: " + values.resourceCount()
                 + "\nЭнергия от ресурсов: " + energy(values.resourceEnergyHundredths())
                 + "\nИгровой выигрыш: " + values.gamePayoff()
+                + "\nЭнергия от игры: " + energy(generation.gameEnergyHundredths())
+                + "\nC в первых раундах: " + percentage(games.firstRoundCooperationRate())
+                + "\nC во всех раундах: " + percentage(games.cooperationRate())
+                + "\nКластеризация: " + percentage(generation.spatialClustering())
                 + "\nSeed: " + snapshot.seed()
                 + "\nЗапуск: " + status
                 + "\nПросмотр: " + (isPlaying() ? "Автовоспроизведение" : "Пауза"));
@@ -235,6 +243,10 @@ public final class SimulationApplication extends Application {
 
     private String energy(double hundredths) {
         return Double.isNaN(hundredths) ? "—" : String.format(Locale.ROOT, "%.2f", hundredths / 100);
+    }
+
+    private String percentage(double fraction) {
+        return Double.isNaN(fraction) ? "—" : String.format(Locale.ROOT, "%.1f%%", fraction * 100);
     }
 
     @Override
