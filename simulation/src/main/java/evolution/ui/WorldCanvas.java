@@ -62,10 +62,10 @@ final class WorldCanvas extends Canvas {
             graphics.fillOval((agent.position().column() + 0.19) * cell,
                     (agent.position().row() + 0.19) * cell, cell * 0.62, cell * 0.62);
         }
-        // Corner markers are drawn last and remain visible even on an occupied cell.
+        // Center markers are drawn last and remain visible even on an occupied cell.
         for (var resource : snapshot.resources()) {
-            double x = (resource.column() + 0.72) * cell;
-            double y = (resource.row() + 0.07) * cell;
+            double x = (resource.column() + 0.395) * cell;
+            double y = (resource.row() + 0.395) * cell;
             graphics.setFill(Color.web("#efb72c"));
             graphics.fillRect(x, y, cell * 0.21, cell * 0.21);
             graphics.setStroke(Color.web("#805a00"));

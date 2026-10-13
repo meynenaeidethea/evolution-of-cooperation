@@ -9,6 +9,7 @@ import javafx.application.Application;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
@@ -22,6 +23,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import javafx.util.StringConverter;
 
 import java.util.Locale;
 
@@ -40,6 +42,7 @@ public final class SimulationApplication extends Application {
     private final Button end = new Button("В конец");
     private final Button forward = new Button("Шаг вперёд");
     private final Button play = new Button("Автовоспроизведение");
+    private final ComboBox<Integer> speed = new ComboBox<>();
     private final Timeline timeline = new Timeline(new KeyFrame(Duration.millis(200), event -> advance()));
     private boolean refreshing;
 
@@ -62,9 +65,7 @@ public final class SimulationApplication extends Application {
         map.heightProperty().addListener((observable, before, after) -> resizeWorld(map));
 
         metrics.setStyle("-fx-font-size: 14px; -fx-line-spacing: 4px;");
-        Label torus = new Label("Тор: верх ↔ низ, лево ↔ право\nКруг — живой агент\nЗолотой квадрат — ресурс");
-        Label explanation = new Label("Суммы — за текущее поколение.\nЦвет обозначает пять генов:\ng₀, gCC, gCD, gDC, gDD.");
-        VBox sidebar = new VBox(16, metrics, torus, explanation, legend());
+        VBox sidebar = new VBox(16, metrics, legend());
         sidebar.setPadding(new Insets(8));
         ScrollPane scroll = new ScrollPane(sidebar);
         scroll.setFitToWidth(true);
@@ -99,7 +100,27 @@ public final class SimulationApplication extends Application {
                 refresh();
             }
         });
-        FlowPane buttons = new FlowPane(8, 8, start, back, forward, end, play);
+        speed.getItems().setAll(1, 2, 5, 10, 20);
+        speed.setConverter(new StringConverter<>() {
+            @Override
+            public String toString(Integer value) {
+                return value == null ? "" : value + "×";
+            }
+
+            @Override
+            public Integer fromString(String value) {
+                return Integer.valueOf(value.replace("×", ""));
+            }
+        });
+        speed.setValue(1);
+        speed.setTooltip(new Tooltip("Скорость автовоспроизведения: 1× = 5 тактов/с, 20× = 100 тактов/с"));
+        speed.valueProperty().addListener((observable, before, after) -> {
+            if (after != null) {
+                timeline.setRate(after);
+            }
+        });
+        FlowPane buttons = new FlowPane(8, 8, start, back, forward, end, play,
+                new HBox(6, new Label("Скорость:"), speed));
         VBox bottom = new VBox(8, buttons, savedTick, slider);
         bottom.setPadding(new Insets(12, 0, 0, 0));
 
