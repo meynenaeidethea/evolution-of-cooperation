@@ -12,52 +12,18 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.random.RandomGenerator;
-import java.util.random.RandomGeneratorFactory;
 
 public final class SimulationRunner {
 
     public SimulationRunResult run(SimulationConfig config, long seed) {
-        RandomGenerator random = RandomGeneratorFactory
-                .of("L64X128MixRandom")
-                .create(seed);
-        WorldGrid grid = new WorldGrid(config.sideLength());
-        long nextAgentId = createInitialPopulation(grid, config, random, 1L);
-        List<GenerationMetrics> metrics = new ArrayList<>();
-
-        for (int generation = 1; generation <= config.maximumGenerations(); generation++) {
-            int resourceEnergy = 0;
-            int gamePayoff = 0;
-
-            for (int tick = 0; tick < config.ticksPerGeneration()
-                    && !grid.livingAgents().isEmpty(); tick++) {
-                grid.regrowResources(config.resourceSpawnProbability(), random);
-                var intents = MovementPhase.chooseIntents(grid, random);
-                MovementPhase.resolveAndApply(grid, intents, random);
-
-                Map<Agent, Integer> resources = EnergyPhase.collectResourceEnergy(
-                        grid, config.resourceEnergyHundredths()
-                );
-                resourceEnergy += resources.values().stream()
-                        .mapToInt(Integer::intValue).sum();
-
-                Map<Agent, Integer> payoffs = playPairs(grid, config, random);
-                gamePayoff += payoffs.values().stream().mapToInt(Integer::intValue).sum();
-                EnergyPhase.applyEnergyAndRemoveDead(grid, resources, payoffs, config);
-            }
-
-            metrics.add(metricsFor(generation, grid, resourceEnergy, gamePayoff));
-            if (grid.livingAgents().isEmpty()) {
-                return new SimulationRunResult(config, seed, "extinct", List.copyOf(metrics));
-            }
-            if (generation < config.maximumGenerations()) {
-                nextAgentId = createNextGeneration(grid, config, random, nextAgentId);
-            }
+        SimulationSession session = new SimulationSession(config, seed);
+        while (!session.isFinished()) {
+            session.advance();
         }
-
-        return new SimulationRunResult(config, seed, "completed", List.copyOf(metrics));
+        return session.result();
     }
 
-    private long createInitialPopulation(
+    long createInitialPopulation(
             WorldGrid grid, SimulationConfig config, RandomGenerator random, long nextAgentId
     ) {
         List<CellPosition> positions = allPositions(config.sideLength());
@@ -72,7 +38,7 @@ public final class SimulationRunner {
         return nextAgentId;
     }
 
-    private long createNextGeneration(
+    long createNextGeneration(
             WorldGrid grid, SimulationConfig config, RandomGenerator random, long nextAgentId
     ) {
         List<Agent> survivors = grid.livingAgents();
@@ -93,7 +59,7 @@ public final class SimulationRunner {
         return nextAgentId;
     }
 
-    private Map<Agent, Integer> playPairs(
+    Map<Agent, Integer> playPairs(
             WorldGrid grid, SimulationConfig config, RandomGenerator random
     ) {
         Map<Agent, Integer> payoffs = new LinkedHashMap<>();
@@ -107,7 +73,7 @@ public final class SimulationRunner {
         return payoffs;
     }
 
-    private GenerationMetrics metricsFor(
+    GenerationMetrics metricsFor(
             int generation, WorldGrid grid, int resourceEnergy, int gamePayoff
     ) {
         List<Agent> survivors = grid.livingAgents();
