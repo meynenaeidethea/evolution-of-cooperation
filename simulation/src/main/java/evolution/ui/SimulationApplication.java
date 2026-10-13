@@ -2,6 +2,7 @@ package evolution.ui;
 
 import evolution.simulation.SimulationConfig;
 import evolution.simulation.SimulationHistory;
+import evolution.analysis.MetricTimeline;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -15,6 +16,8 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.control.Slider;
 import javafx.scene.control.TextField;
 import javafx.scene.control.Tooltip;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.HBox;
@@ -31,6 +34,9 @@ public final class SimulationApplication extends Application {
     private final SimulationConfig config = SimulationConfig.baseline();
     private final SimulationHistory history = new SimulationHistory(config, 1);
     private final WorldCanvas world = new WorldCanvas();
+    private final MetricCharts charts = new MetricCharts(tick -> navigate(() -> history.seek(Math.toIntExact(tick))));
+    private final Tab chartsTab = new Tab("Графики", charts);
+    private long lastChartUpdate;
     private final TextField seed = new TextField("1");
     private final Label seedError = new Label();
     private final Label heading = new Label();
@@ -127,7 +133,12 @@ public final class SimulationApplication extends Application {
         BorderPane root = new BorderPane();
         root.setPadding(new Insets(16));
         root.setTop(top);
-        root.setCenter(map);
+        TabPane views = new TabPane(new Tab("Мир", map), chartsTab);
+        views.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+        views.getSelectionModel().selectedItemProperty().addListener((observable, before, after) -> {
+            if (after == chartsTab) refreshCharts(true);
+        });
+        root.setCenter(views);
         root.setRight(scroll);
         root.setBottom(bottom);
         BorderPane.setMargin(scroll, new Insets(0, 0, 0, 16));
@@ -202,6 +213,7 @@ public final class SimulationApplication extends Application {
         var generation = values.generationMetrics();
         var games = generation.gameStatistics();
         world.show(snapshot);
+        refreshCharts(!isPlaying());
         heading.setText("Поколение " + snapshot.generation() + " / " + config.maximumGenerations()
                 + "   ·   Такт " + snapshot.tick() + " / " + config.ticksPerGeneration());
         String status = switch (snapshot.status()) {
@@ -243,6 +255,15 @@ public final class SimulationApplication extends Application {
 
     private String energy(double hundredths) {
         return Double.isNaN(hundredths) ? "—" : String.format(Locale.ROOT, "%.2f", hundredths / 100);
+    }
+
+    private void refreshCharts(boolean force) {
+        if (!chartsTab.isSelected()) return;
+        long now = System.nanoTime();
+        if (force || now - lastChartUpdate >= 200_000_000L) {
+            charts.show(MetricTimeline.fromSnapshots(history.snapshots(), history.cursor()));
+            lastChartUpdate = now;
+        }
     }
 
     private String percentage(double fraction) {
