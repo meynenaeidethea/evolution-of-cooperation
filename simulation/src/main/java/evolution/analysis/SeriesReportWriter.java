@@ -1,6 +1,6 @@
 package evolution.analysis;
 
-import org.knowm.xchart.BitmapEncoder;
+import org.knowm.xchart.ChartEncoder;
 import org.knowm.xchart.XYChart;
 import org.knowm.xchart.XYChartBuilder;
 import org.knowm.xchart.XYSeries;
@@ -75,9 +75,10 @@ public final class SeriesReportWriter {
         html.append("</table><h2>Динамика поколений</h2><p>Средние по seed; интервалы и n сохранены в trajectories.csv. Отсутствующие значения не заменяются нулями.</p>");
         StringBuilder trajectories = new StringBuilder("scenario,generation,metric,n,mean,ci_low,ci_high\n");
         for (var scenario : report.scenarios()) for (var point : scenario.trajectory()) {
-            row(trajectories, scenario.id() + "," + point.generation(), "survival", point.survival(), false);
-            row(trajectories, scenario.id() + "," + point.generation(), "cooperation", point.cooperation(), false);
-            row(trajectories, scenario.id() + "," + point.generation(), "energy", point.energy(), false);
+            String prefix = csv(scenario.id()) + "," + point.generation();
+            values(trajectories, prefix, "survival", point.survival());
+            values(trajectories, prefix, "cooperation", point.cooperation());
+            values(trajectories, prefix, "energy", point.energy());
         }
         // A few curves per chart, rather than all scenario lines in a single unreadable plot.
         var families = report.scenarios().stream().filter(s -> !s.id().equals("baseline"))
@@ -89,14 +90,34 @@ public final class SeriesReportWriter {
             html.append("<h3>").append(escape(family)).append("</h3>");
             trajectory(html, output, scenarios, "trajectory-" + (++figure), "Survival (%)", SeriesAnalysis.Trajectory::survival, 100);
             trajectory(html, output, scenarios, "trajectory-" + (++figure), "Cooperation (%)", SeriesAnalysis.Trajectory::cooperation, 100);
+            trajectory(html, output, scenarios, "trajectory-" + (++figure), "Mean energy of survivors", SeriesAnalysis.Trajectory::energy, 1);
+        }
+        html.append("<h2>Динамика ведущих генотипов</h2><p>Для каждого сценария показаны пять генотипов с наибольшей средней частотой хотя бы в одном поколении, остальные объединены. Это описательный выбор, не проверка гипотезы. Средние рассчитываются среди живых популяций; n и все 32 частоты сохранены в genotype-trajectories.csv.</p>");
+        StringBuilder genotypeCsv = new StringBuilder("scenario,generation,genotype,n,mean_frequency\n");
+        int genotypeFigure = 0;
+        for (var scenario : report.scenarios()) {
+            var peaks = new java.util.TreeMap<String, Double>();
+            scenario.genotypeTrajectory().forEach(p -> p.frequencies().forEach((gene, frequency) -> peaks.merge(gene, frequency, Math::max)));
+            var leaders = peaks.keySet().stream().sorted(java.util.Comparator.<String>comparingDouble(peaks::get).reversed()
+                    .thenComparing(Function.identity())).limit(5).toList();
+            var defined = scenario.genotypeTrajectory().stream().filter(p -> p.n() > 0).toList();
+            var chart = chart(scenario.id() + " — genotype frequencies", "Generation", "Frequency (%)", 500);
+            chart.getStyler().setYAxisMin(0.0); chart.getStyler().setYAxisMax(100.0);
+            for (String gene : leaders) chart.addSeries(gene, defined.stream().mapToDouble(SeriesAnalysis.GenotypePoint::generation).toArray(),
+                    defined.stream().mapToDouble(p -> p.frequencies().get(gene) * 100).toArray());
+            if (!defined.isEmpty()) chart.addSeries("Other", defined.stream().mapToDouble(SeriesAnalysis.GenotypePoint::generation).toArray(),
+                    defined.stream().mapToDouble(p -> Math.max(0, 1 - leaders.stream().mapToDouble(g -> p.frequencies().get(g)).sum()) * 100).toArray());
+            html.append("<h3>").append(escape(scenario.id())).append("</h3>");
+            embed(html, output, "genotypes-" + (++genotypeFigure), chart);
+            for (var point : scenario.genotypeTrajectory()) for (int i = 0; i < 32; i++) {
+                String gene = genotype(i);
+                genotypeCsv.append(csv(scenario.id())).append(',').append(point.generation()).append(',').append(gene).append(',')
+                        .append(point.n()).append(',').append(number(point.frequencies().getOrDefault(gene, Double.NaN))).append('\n');
+            }
         }
         html.append("<h2>Частоты генотипов в последнем поколении</h2><p>Средние частоты по завершённым seed, не объединённый подсчёт всех агентов. Пусто — нет завершённых запусков.</p>");
         html.append("<div class=\"scroll\"><table><tr><th>Сценарий</th>");
-        var genes = java.util.stream.IntStream.range(0, 32).mapToObj(i -> {
-            StringBuilder gene = new StringBuilder();
-            for (int bit = 4; bit >= 0; bit--) gene.append((i & (1 << bit)) == 0 ? 'C' : 'D');
-            return gene.toString();
-        }).toList();
+        var genes = java.util.stream.IntStream.range(0, 32).mapToObj(SeriesReportWriter::genotype).toList();
         genes.forEach(g -> html.append("<th>").append(g).append("</th>"));
         html.append("</tr>");
         for (var scenario : report.scenarios()) {
@@ -123,6 +144,7 @@ public final class SeriesReportWriter {
         Files.writeString(output.resolve("summary.csv"), summary);
         Files.writeString(output.resolve("paired-effects.csv"), effects);
         Files.writeString(output.resolve("trajectories.csv"), trajectories);
+        Files.writeString(output.resolve("genotype-trajectories.csv"), genotypeCsv);
         Files.writeString(output.resolve("source.sha256"), hashes);
         Files.writeString(output.resolve("report.html"), html);
     }
@@ -163,7 +185,7 @@ public final class SeriesReportWriter {
                                    String title, Function<SeriesAnalysis.Trajectory, BootstrapStatistics.Estimate> metric, double scale) throws IOException {
         var chart = chart(title, "Generation", title, 500);
         chart.getStyler().setYAxisMin(0.0);
-        chart.getStyler().setYAxisMax(100.0);
+        if (scale == 100) chart.getStyler().setYAxisMax(100.0);
         for (var scenario : scenarios) {
             var defined = scenario.trajectory().stream().filter(p -> metric.apply(p).n() > 0).toList();
             if (defined.isEmpty()) continue;
@@ -175,7 +197,7 @@ public final class SeriesReportWriter {
 
     private static void embed(StringBuilder html, Path output, String name, XYChart chart) throws IOException {
         if (chart.getSeriesCollection().isEmpty()) { html.append("<p>Нет определённых наблюдений для графика.</p>"); return; }
-        byte[] png = BitmapEncoder.getBitmapBytes(chart, BitmapEncoder.BitmapFormat.PNG);
+        byte[] png = ChartEncoder.getBytes(chart, "png");
         Files.write(output.resolve(name + ".png"), png);
         html.append("<img alt=\"").append(escape(chart.getTitle())).append("\" src=\"data:image/png;base64,")
                 .append(Base64.getEncoder().encodeToString(png)).append("\">");
@@ -185,15 +207,20 @@ public final class SeriesReportWriter {
         int dash = id.lastIndexOf('-');
         return dash < 0 ? id : id.substring(0, dash);
     }
+    private static String genotype(int value) {
+        StringBuilder gene = new StringBuilder();
+        for (int bit = 4; bit >= 0; bit--) gene.append((value & (1 << bit)) == 0 ? 'C' : 'D');
+        return gene.toString();
+    }
     private static void cell(StringBuilder html, BootstrapStatistics.Estimate value, double scale) {
         html.append("<td>").append(value.n() == 0 ? "—; n=0" : format(value.mean() * scale) + " ["
                 + format(value.low() * scale) + "; " + format(value.high() * scale) + "]; n=" + value.n()).append("</td>");
     }
     private static void row(StringBuilder csv, String id, String metric, BootstrapStatistics.Estimate estimate) {
-        row(csv, id, metric, estimate, true);
+        values(csv, csv(id), metric, estimate);
     }
-    private static void row(StringBuilder csv, String id, String metric, BootstrapStatistics.Estimate estimate, boolean quote) {
-        csv.append(quote ? csv(id) : csv(id.substring(0, id.lastIndexOf(','))) + id.substring(id.lastIndexOf(',')))
+    private static void values(StringBuilder csv, String prefix, String metric, BootstrapStatistics.Estimate estimate) {
+        csv.append(prefix)
                 .append(',').append(metric).append(',').append(estimate.n()).append(',')
                 .append(number(estimate.mean())).append(',').append(number(estimate.low())).append(',').append(number(estimate.high())).append('\n');
     }

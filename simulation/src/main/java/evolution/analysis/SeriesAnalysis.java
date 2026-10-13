@@ -27,11 +27,17 @@ public final class SeriesAnalysis {
     }
     public record Trajectory(int generation, BootstrapStatistics.Estimate survival,
                              BootstrapStatistics.Estimate cooperation, BootstrapStatistics.Estimate energy) {}
+    public record GenotypePoint(int generation, int n, Map<String, Double> frequencies) {
+        public GenotypePoint { frequencies = Map.copyOf(frequencies); }
+    }
     public record Scenario(String id, List<Run> runs, BootstrapStatistics.Estimate completion,
                            BootstrapStatistics.Estimate survival, BootstrapStatistics.Estimate cooperation,
                            BootstrapStatistics.Estimate energy, List<Trajectory> trajectory,
-                           Map<String, Double> genotypeFrequencies) {
-        public Scenario { runs = List.copyOf(runs); trajectory = List.copyOf(trajectory); genotypeFrequencies = Map.copyOf(genotypeFrequencies); }
+                           Map<String, Double> genotypeFrequencies, List<GenotypePoint> genotypeTrajectory) {
+        public Scenario {
+            runs = List.copyOf(runs); trajectory = List.copyOf(trajectory);
+            genotypeFrequencies = Map.copyOf(genotypeFrequencies); genotypeTrajectory = List.copyOf(genotypeTrajectory);
+        }
     }
     public record Effect(String scenario, BootstrapStatistics.Estimate survival, BootstrapStatistics.Estimate cooperation) {}
     public record Report(Path source, int horizon, List<Scenario> scenarios, List<Effect> effects) {
@@ -141,8 +147,16 @@ public final class SeriesAnalysis {
                 }
             }
             var trajectory = new ArrayList<Trajectory>();
+            var genotypeTrajectory = new ArrayList<GenotypePoint>();
             for (int generation = 1; generation <= horizon; generation++) {
                 final int g = generation;
+                var livingRuns = list.stream().filter(run -> run.generations().containsKey(g) && run.generations().get(g).living() > 0).toList();
+                var genotypeMeans = new TreeMap<String, Double>();
+                for (var run : livingRuns) {
+                    frequencies.get(new GenerationKey(new Key(run.scenario(), run.repetition()), g))
+                            .forEach((gene, frequency) -> genotypeMeans.merge(gene, frequency / livingRuns.size(), Double::sum));
+                }
+                genotypeTrajectory.add(new GenotypePoint(g, livingRuns.size(), genotypeMeans));
                 trajectory.add(new Trajectory(g,
                         estimate(list, run -> run.generations().containsKey(g) ? (double) run.generations().get(g).living() / run.population() : 0, entry.getKey()+g+"S"),
                         estimate(list, run -> run.generations().containsKey(g) && run.generations().get(g).living() > 0 ? run.generations().get(g).cooperation() : Double.NaN, entry.getKey()+g+"C"),
@@ -158,7 +172,7 @@ public final class SeriesAnalysis {
             }
             scenarios.add(new Scenario(entry.getKey(), list, BootstrapStatistics.probability((int) completed, list.size()),
                     estimate(list, Run::endSurvival, entry.getKey()+"S"), estimate(list, Run::endCooperation, entry.getKey()+"C"),
-                    estimate(list, Run::endEnergy, entry.getKey()+"E"), trajectory, means));
+                    estimate(list, Run::endEnergy, entry.getKey()+"E"), trajectory, means, genotypeTrajectory));
         }
         var effects = new ArrayList<Effect>();
         var base = grouped.get("baseline");

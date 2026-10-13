@@ -43,6 +43,13 @@ class SeriesAnalysisTest {
         assertEquals(0, report.effects().getFirst().cooperation().mean());
         assertEquals(0, report.effects().getFirst().survival().high());
         assertEquals(2, base.trajectory().size());
+        assertEquals(2, base.genotypeTrajectory().size());
+        for (var point : base.genotypeTrajectory()) {
+            assertEquals(3, point.n());
+            assertEquals(32, point.frequencies().size());
+            assertEquals(1, point.frequencies().values().stream().mapToDouble(Double::doubleValue).sum(), 1e-10);
+            assertThrows(UnsupportedOperationException.class, () -> point.frequencies().clear());
+        }
         assertEquals(report, SeriesAnalysis.read(directory));
         assertThrows(UnsupportedOperationException.class, () -> base.runs().clear());
         assertThrows(UnsupportedOperationException.class, () -> base.genotypeFrequencies().clear());
@@ -59,6 +66,7 @@ class SeriesAnalysisTest {
         assertEquals(0, scenario.energy().n());
         assertEquals(0, scenario.trajectory().getLast().survival().mean());
         assertTrue(scenario.genotypeFrequencies().isEmpty());
+        assertTrue(scenario.genotypeTrajectory().stream().allMatch(p -> p.n() == 0 && p.frequencies().isEmpty()));
     }
 
     @Test

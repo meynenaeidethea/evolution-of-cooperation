@@ -40,6 +40,8 @@ class SeriesReportWriterTest {
         assertEquals(1100, png.getWidth());
         assertEquals(4, CsvTable.read(output.resolve("summary.csv")).rows().size());
         assertEquals(6, CsvTable.read(output.resolve("trajectories.csv")).rows().size());
+        assertEquals(64, CsvTable.read(output.resolve("genotype-trajectories.csv")).rows().size());
+        assertNotNull(ImageIO.read(output.resolve("genotypes-1.png").toFile()));
         assertEquals(3, Files.readAllLines(output.resolve("source.sha256")).size());
         assertEquals(original, Files.readString(source.resolve("runs.csv")));
         assertThrows(FileAlreadyExistsException.class, () -> SeriesReportWriter.write(SeriesAnalysis.read(source), output));
