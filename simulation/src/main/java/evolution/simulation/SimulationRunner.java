@@ -1,13 +1,12 @@
 package evolution.simulation;
 
-import evolution.game.MatchPayoff;
+import evolution.game.GameStatistics;
 import evolution.game.RepeatedGame;
 import evolution.world.Agent;
 import evolution.world.CellPosition;
 import evolution.world.WorldGrid;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -59,40 +58,20 @@ public final class SimulationRunner {
         return nextAgentId;
     }
 
-    Map<Agent, Integer> playPairs(
+    TickGameResult playPairs(
             WorldGrid grid, SimulationConfig config, RandomGenerator random
     ) {
         Map<Agent, Integer> payoffs = new LinkedHashMap<>();
+        GameStatistics statistics = GameStatistics.EMPTY;
         for (AgentPair pair : PairingPhase.formPairs(grid, random)) {
-            MatchPayoff payoff = RepeatedGame.play(
+            var match = RepeatedGame.playDetailed(
                     pair.first().genotype(), pair.second().genotype(), config.roundsPerMatch()
             );
-            payoffs.put(pair.first(), payoff.firstAgentTotal());
-            payoffs.put(pair.second(), payoff.secondAgentTotal());
+            payoffs.put(pair.first(), match.payoff().firstAgentTotal());
+            payoffs.put(pair.second(), match.payoff().secondAgentTotal());
+            statistics = statistics.plus(match.statistics());
         }
-        return payoffs;
-    }
-
-    GenerationMetrics metricsFor(
-            int generation, WorldGrid grid, int resourceEnergy, int gamePayoff
-    ) {
-        List<Agent> survivors = grid.livingAgents();
-        double averageEnergy = survivors.stream().mapToInt(Agent::energyHundredths)
-                .average().orElse(Double.NaN);
-        Map<String, Integer> genotypes = new LinkedHashMap<>();
-        survivors.stream()
-                .sorted(Comparator.comparingLong(Agent::agentId))
-                .forEach(agent -> genotypes.merge(genotypeKey(agent), 1, Integer::sum));
-        return new GenerationMetrics(
-                generation, survivors.size(), averageEnergy, resourceEnergy, gamePayoff,
-                Map.copyOf(genotypes)
-        );
-    }
-
-    private String genotypeKey(Agent agent) {
-        var genotype = agent.genotype();
-        return "" + genotype.firstMove() + genotype.afterCC() + genotype.afterCD()
-                + genotype.afterDC() + genotype.afterDD();
+        return new TickGameResult(payoffs, statistics);
     }
 
     private List<CellPosition> allPositions(int sideLength) {

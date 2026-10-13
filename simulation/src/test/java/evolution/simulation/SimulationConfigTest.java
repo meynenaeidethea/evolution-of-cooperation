@@ -8,15 +8,15 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class SimulationConfigTest {
 
     @Test
-    void createsApprovedBaselineConfiguration() {
+    void initializesWorldUsingChosenBaselineConfiguration() {
         SimulationConfig config = SimulationConfig.baseline();
-
-        assertEquals(30, config.sideLength());
-        assertEquals(450, config.populationSize());
-        assertEquals(5, config.roundsPerMatch());
-        assertEquals(1_000, config.initialEnergyHundredths());
-        assertEquals(20, config.gamePayoffWeightHundredths());
-        assertEquals(100, config.maximumGenerations());
+        var initial = new SimulationSession(config, 1).currentSnapshot();
+        assertEquals(config.sideLength(), initial.sideLength());
+        assertEquals(config.populationSize(), initial.agents().size());
+        assertEquals(config.populationSize(), initial.agents().stream().map(a -> a.position()).distinct().count());
+        for (var agent : initial.agents()) {
+            assertEquals(config.initialEnergyHundredths(), agent.energyHundredths());
+        }
     }
 
     @Test

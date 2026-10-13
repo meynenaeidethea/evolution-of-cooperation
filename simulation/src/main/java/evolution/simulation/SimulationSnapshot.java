@@ -20,5 +20,6 @@ public record SimulationSnapshot(
 
     /** Resource energy and raw game payoff accumulate within the displayed generation. */
     public record Metrics(int livingAgents, double averageEnergyHundredths, int resourceCount,
-                          int resourceEnergyHundredths, int gamePayoff) {}
+                          long resourceEnergyHundredths, long gamePayoff,
+                          GenerationMetrics generationMetrics) {}
 }

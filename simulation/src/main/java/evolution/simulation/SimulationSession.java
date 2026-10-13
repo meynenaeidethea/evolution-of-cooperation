@@ -1,5 +1,6 @@
 package evolution.simulation;
 
+import evolution.game.GameStatistics;
 import evolution.world.Agent;
 import evolution.world.CellPosition;
 import evolution.world.WorldGrid;
@@ -23,8 +24,9 @@ public final class SimulationSession {
     private long elapsedTicks;
     private int generation = 1;
     private int tick;
-    private int resourceEnergy;
-    private int gamePayoff;
+    private long resourceEnergy;
+    private long gamePayoff;
+    private GameStatistics gameStatistics = GameStatistics.EMPTY;
     private String status = "running";
 
     public SimulationSession(SimulationConfig config, long seed) {
@@ -50,20 +52,22 @@ public final class SimulationSession {
             tick = 0;
             resourceEnergy = 0;
             gamePayoff = 0;
+            gameStatistics = GameStatistics.EMPTY;
         }
         grid.regrowResources(config.resourceSpawnProbability(), random);
         var intents = MovementPhase.chooseIntents(grid, random);
         MovementPhase.resolveAndApply(grid, intents, random);
         Map<Agent, Integer> resources = EnergyPhase.collectResourceEnergy(
                 grid, config.resourceEnergyHundredths());
-        resourceEnergy += resources.values().stream().mapToInt(Integer::intValue).sum();
-        Map<Agent, Integer> payoffs = phases.playPairs(grid, config, random);
-        gamePayoff += payoffs.values().stream().mapToInt(Integer::intValue).sum();
-        EnergyPhase.applyEnergyAndRemoveDead(grid, resources, payoffs, config);
+        resourceEnergy += resources.values().stream().mapToLong(Integer::longValue).sum();
+        var games = phases.playPairs(grid, config, random);
+        gamePayoff += games.payoffs().values().stream().mapToLong(Integer::longValue).sum();
+        gameStatistics = gameStatistics.plus(games.statistics());
+        EnergyPhase.applyEnergyAndRemoveDead(grid, resources, games.payoffs(), config);
         tick++;
         elapsedTicks++;
         if (grid.livingAgents().isEmpty() || tick == config.ticksPerGeneration()) {
-            metrics.add(phases.metricsFor(generation, grid, resourceEnergy, gamePayoff));
+            metrics.add(currentMetrics());
             if (grid.livingAgents().isEmpty()) {
                 status = "extinct";
             } else if (generation == config.maximumGenerations()) {
@@ -89,7 +93,12 @@ public final class SimulationSession {
                 .average().orElse(Double.NaN);
         return new SimulationSnapshot(config.sideLength(), seed, generation, tick, elapsedTicks,
                 status, agents, resources, new SimulationSnapshot.Metrics(agents.size(), average,
-                resources.size(), resourceEnergy, gamePayoff));
+                resources.size(), resourceEnergy, gamePayoff, currentMetrics()));
+    }
+
+    private GenerationMetrics currentMetrics() {
+        return MetricsCalculator.measure(generation, tick, grid, config, resourceEnergy, gamePayoff,
+                gameStatistics);
     }
 
     public SimulationRunResult result() {

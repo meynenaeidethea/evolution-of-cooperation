@@ -25,7 +25,12 @@ class SimulationSessionTest {
         assertEquals(4, snapshot.agents().size());
         assertEquals(9, snapshot.resources().size());
         assertTrue(snapshot.agents().stream().allMatch(a -> snapshot.resources().contains(a.position())));
-        assertEquals(new SimulationSnapshot.Metrics(4, 1000, 9, 0, 0), snapshot.metrics());
+        assertEquals(4, snapshot.metrics().livingAgents());
+        assertEquals(1000, snapshot.metrics().averageEnergyHundredths());
+        assertEquals(9, snapshot.metrics().resourceCount());
+        assertEquals(0, snapshot.metrics().resourceEnergyHundredths());
+        assertEquals(0, snapshot.metrics().gamePayoff());
+        assertEquals(0, snapshot.metrics().generationMetrics().gameStatistics().matches());
     }
 
     @Test
@@ -90,14 +95,33 @@ class SimulationSessionTest {
             session.advance();
         }
         var result = session.result();
-        assertEquals(new GenerationMetrics(1, 4, 1290, 1600, 18,
-                Map.of("DCCCC", 1, "DDDDC", 1, "CDDDC", 1, "CDCDC", 1)), result.generations().get(0));
-        assertEquals(new GenerationMetrics(2, 4, 1340, 2000, 8,
-                Map.of("DDDDC", 1, "DCCDC", 1, "DCCCC", 2)), result.generations().get(1));
+        var first = result.generations().get(0);
+        assertLegacyMetrics(first, 1, 1290, 1600, 18,
+                Map.of("DCCCC", 1, "DDDDC", 1, "CDDDC", 1, "CDCDC", 1));
+        var second = result.generations().get(1);
+        assertLegacyMetrics(second, 2, 1340, 2000, 8,
+                Map.of("DDDDC", 1, "DCCDC", 1, "DCCCC", 2));
+        assertEquals(4, first.gameStatistics().matches());
+        assertEquals(4, first.gameStatistics().rounds());
+        assertEquals(0.5, first.gameStatistics().cooperationRate());
+        assertEquals(4, second.gameStatistics().matches());
+        assertEquals(4, second.gameStatistics().dd());
+        assertEquals(0, second.gameStatistics().cooperationRate());
         assertEquals(result, new SimulationRunner().run(config, 7));
         var snapshot = session.currentSnapshot();
         assertEquals(2000, snapshot.metrics().resourceEnergyHundredths());
         assertEquals(8, snapshot.metrics().gamePayoff());
         assertEquals(1340, snapshot.metrics().averageEnergyHundredths());
+        assertEquals(second, snapshot.metrics().generationMetrics());
+    }
+
+    private void assertLegacyMetrics(GenerationMetrics actual, int generation, double average,
+                                     long resources, long payoff, Map<String, Integer> genotypes) {
+        assertEquals(generation, actual.generation());
+        assertEquals(4, actual.livingAgents());
+        assertEquals(average, actual.averageEnergyHundredths());
+        assertEquals(resources, actual.resourceEnergyHundredths());
+        assertEquals(payoff, actual.gamePayoff());
+        assertEquals(genotypes, actual.genotypeCounts());
     }
 }
