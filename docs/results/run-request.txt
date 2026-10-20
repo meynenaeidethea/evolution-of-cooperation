@@ -1,0 +1,1 @@
+Model 1.0.0; 18 scenarios; seeds 1..30; G=100; recover full results in GitHub Actions.

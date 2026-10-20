@@ -1,6 +1,9 @@
 name: Full experiment suite
 on:
   workflow_dispatch:
+  push:
+    branches: [feat/complete-cooperation-study]
+    paths: [docs/results/run-request.txt]
 permissions:
   contents: read
 jobs:
@@ -25,3 +28,4 @@ jobs:
         with:
           name: full-study
           path: results/full
+          retention-days: 90
