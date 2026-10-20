@@ -13,9 +13,11 @@ public record SimulationConfig(
         double crossoverProbability,
         double mutationProbability,
         int tournamentSize,
-        int maximumGenerations
+        int maximumGenerations,
+        PairingMode pairingMode
 ) {
     public SimulationConfig {
+        java.util.Objects.requireNonNull(pairingMode, "Pairing mode must be defined");
         if (sideLength < 3) {
             throw new IllegalArgumentException("Side length must be at least 3");
         }
@@ -49,6 +51,23 @@ public record SimulationConfig(
         if (maximumGenerations < 1) {
             throw new IllegalArgumentException("Maximum generations must be at least 1");
         }
+    }
+
+    public SimulationConfig(int sideLength, int populationSize, int ticksPerGeneration, int roundsPerMatch,
+            int initialEnergyHundredths, int resourceEnergyHundredths, int livingCostHundredths,
+            double resourceSpawnProbability, int gamePayoffWeightHundredths, double crossoverProbability,
+            double mutationProbability, int tournamentSize, int maximumGenerations) {
+        this(sideLength, populationSize, ticksPerGeneration, roundsPerMatch, initialEnergyHundredths,
+                resourceEnergyHundredths, livingCostHundredths, resourceSpawnProbability,
+                gamePayoffWeightHundredths, crossoverProbability, mutationProbability,
+                tournamentSize, maximumGenerations, PairingMode.LOCAL);
+    }
+
+    public SimulationConfig with(int rounds, int weight, double mutation, double spawn,
+                                 int resource, PairingMode mode, int generations) {
+        return new SimulationConfig(sideLength, populationSize, ticksPerGeneration, rounds,
+                initialEnergyHundredths, resource, livingCostHundredths, spawn, weight,
+                crossoverProbability, mutation, tournamentSize, generations, mode);
     }
 
     public static SimulationConfig baseline() {

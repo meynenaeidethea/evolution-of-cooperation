@@ -28,9 +28,17 @@ public final class Genetics {
             throw new IllegalArgumentException("At least one survivor is required");
         }
 
-        List<Agent> candidates = new ArrayList<>(survivors);
-        shuffle(candidates, random);
-        int count = Math.min(tournamentSize, candidates.size());
+        if (tournamentSize < 1) throw new IllegalArgumentException("Tournament size must be positive");
+        int count = Math.min(tournamentSize, survivors.size());
+        // Partial Fisher-Yates through a sparse index map: O(tournamentSize), without replacement.
+        java.util.Map<Integer, Integer> swaps = new java.util.HashMap<>();
+        List<Agent> candidates = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            int chosen = i + random.nextInt(survivors.size() - i);
+            int selected = swaps.getOrDefault(chosen, chosen);
+            swaps.put(chosen, swaps.getOrDefault(i, i));
+            candidates.add(survivors.get(selected));
+        }
         int highestEnergy = candidates.getFirst().energyHundredths();
         for (int index = 1; index < count; index++) {
             highestEnergy = Math.max(highestEnergy, candidates.get(index).energyHundredths());

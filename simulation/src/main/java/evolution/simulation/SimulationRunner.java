@@ -1,13 +1,12 @@
 package evolution.simulation;
 
-import evolution.game.MatchPayoff;
+import evolution.game.MatchStatistics;
 import evolution.game.RepeatedGame;
 import evolution.world.Agent;
 import evolution.world.CellPosition;
 import evolution.world.WorldGrid;
 
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,19 +16,27 @@ import java.util.random.RandomGeneratorFactory;
 public final class SimulationRunner {
 
     public SimulationRunResult run(SimulationConfig config, long seed) {
+        return run("baseline", 1, config, seed, (generation, grid) -> {});
+    }
+
+    public SimulationRunResult run(String scenarioId, int repetition, SimulationConfig config, long seed,
+            java.util.function.BiConsumer<Integer, WorldGrid> observer) {
+        if (!scenarioId.matches("[a-zA-Z0-9_.-]+") || repetition < 1) {
+            throw new IllegalArgumentException("Invalid scenario ID or repetition");
+        }
+        MatchStatistics[][] cache = new MatchStatistics[32][32];
         RandomGenerator random = RandomGeneratorFactory
-                .of("L64X128MixRandom")
+                .of(SimulationRunResult.GENERATOR)
                 .create(seed);
         WorldGrid grid = new WorldGrid(config.sideLength());
         long nextAgentId = createInitialPopulation(grid, config, random, 1L);
         List<GenerationMetrics> metrics = new ArrayList<>();
 
         for (int generation = 1; generation <= config.maximumGenerations(); generation++) {
-            int resourceEnergy = 0;
-            int gamePayoff = 0;
-
-            for (int tick = 0; tick < config.ticksPerGeneration()
-                    && !grid.livingAgents().isEmpty(); tick++) {
+            long resourceEnergy = 0, gamePayoff = 0;
+            long[] counts = new long[7]; // matches, first C, all C, CC, CD, DC, DD
+            int ticks = 0;
+            for (; ticks < config.ticksPerGeneration() && !grid.livingAgents().isEmpty(); ticks++) {
                 grid.regrowResources(config.resourceSpawnProbability(), random);
                 var intents = MovementPhase.chooseIntents(grid, random);
                 MovementPhase.resolveAndApply(grid, intents, random);
@@ -38,23 +45,24 @@ public final class SimulationRunner {
                         grid, config.resourceEnergyHundredths()
                 );
                 resourceEnergy += resources.values().stream()
-                        .mapToInt(Integer::intValue).sum();
+                        .mapToLong(Integer::longValue).sum();
 
-                Map<Agent, Integer> payoffs = playPairs(grid, config, random);
-                gamePayoff += payoffs.values().stream().mapToInt(Integer::intValue).sum();
+                Map<Agent, Integer> payoffs = playPairs(grid, config, random, cache, counts);
+                gamePayoff += payoffs.values().stream().mapToLong(Integer::longValue).sum();
                 EnergyPhase.applyEnergyAndRemoveDead(grid, resources, payoffs, config);
             }
 
-            metrics.add(metricsFor(generation, grid, resourceEnergy, gamePayoff));
+            metrics.add(metricsFor(generation, ticks, grid, config, resourceEnergy, gamePayoff, counts));
+            observer.accept(generation, grid);
             if (grid.livingAgents().isEmpty()) {
-                return new SimulationRunResult(config, seed, "extinct", List.copyOf(metrics));
+                return result(scenarioId, repetition, config, seed, "extinct", metrics);
             }
             if (generation < config.maximumGenerations()) {
                 nextAgentId = createNextGeneration(grid, config, random, nextAgentId);
             }
         }
 
-        return new SimulationRunResult(config, seed, "completed", List.copyOf(metrics));
+        return result(scenarioId, repetition, config, seed, "completed", metrics);
     }
 
     private long createInitialPopulation(
@@ -93,40 +101,58 @@ public final class SimulationRunner {
         return nextAgentId;
     }
 
-    private Map<Agent, Integer> playPairs(
-            WorldGrid grid, SimulationConfig config, RandomGenerator random
-    ) {
+    private SimulationRunResult result(String scenario, int repetition, SimulationConfig config,
+            long seed, String status, List<GenerationMetrics> metrics) {
+        return new SimulationRunResult(scenario, repetition, config, seed, SimulationRunResult.MODEL_VERSION,
+                SimulationRunResult.GENERATOR, System.getProperty("java.version"), status, metrics);
+    }
+
+    private Map<Agent, Integer> playPairs(WorldGrid grid, SimulationConfig config, RandomGenerator random,
+            MatchStatistics[][] cache, long[] counts) {
         Map<Agent, Integer> payoffs = new LinkedHashMap<>();
-        for (AgentPair pair : PairingPhase.formPairs(grid, random)) {
-            MatchPayoff payoff = RepeatedGame.play(
-                    pair.first().genotype(), pair.second().genotype(), config.roundsPerMatch()
-            );
-            payoffs.put(pair.first(), payoff.firstAgentTotal());
-            payoffs.put(pair.second(), payoff.secondAgentTotal());
+        for (AgentPair pair : PairingPhase.formPairs(grid, random, config.pairingMode())) {
+            int first = pair.first().genotype().index(), second = pair.second().genotype().index();
+            MatchStatistics match = cache[first][second];
+            if (match == null) {
+                match = RepeatedGame.analyze(pair.first().genotype(), pair.second().genotype(), config.roundsPerMatch());
+                cache[first][second] = match;
+            }
+            payoffs.put(pair.first(), match.payoff().firstAgentTotal());
+            payoffs.put(pair.second(), match.payoff().secondAgentTotal());
+            counts[0]++; counts[1] += match.firstRoundCooperations(); counts[2] += match.cooperations();
+            counts[3] += match.cc(); counts[4] += match.cd(); counts[5] += match.dc(); counts[6] += match.dd();
         }
         return payoffs;
     }
 
-    private GenerationMetrics metricsFor(
-            int generation, WorldGrid grid, int resourceEnergy, int gamePayoff
-    ) {
+    private GenerationMetrics metricsFor(int generation, int ticks, WorldGrid grid, SimulationConfig config,
+            long resourceEnergy, long gamePayoff, long[] counts) {
         List<Agent> survivors = grid.livingAgents();
-        double averageEnergy = survivors.stream().mapToInt(Agent::energyHundredths)
-                .average().orElse(Double.NaN);
+        double averageEnergy = survivors.stream().mapToInt(Agent::energyHundredths).average().orElse(Double.NaN);
+        double maximumEnergy = survivors.stream().mapToInt(Agent::energyHundredths).max().stream()
+                .mapToDouble(value -> value).findFirst().orElse(Double.NaN);
         Map<String, Integer> genotypes = new LinkedHashMap<>();
-        survivors.stream()
-                .sorted(Comparator.comparingLong(Agent::agentId))
-                .forEach(agent -> genotypes.merge(genotypeKey(agent), 1, Integer::sum));
-        return new GenerationMetrics(
-                generation, survivors.size(), averageEnergy, resourceEnergy, gamePayoff,
-                Map.copyOf(genotypes)
-        );
+        survivors.forEach(agent -> genotypes.merge(agent.genotype().key(), 1, Integer::sum));
+        return new GenerationMetrics(generation, ticks, survivors.size(),
+                (double) survivors.size() / config.populationSize(), averageEnergy, maximumEnergy,
+                resourceEnergy, gamePayoff, gamePayoff * config.gamePayoffWeightHundredths(),
+                counts[0], counts[1], counts[2], counts[3], counts[4], counts[5], counts[6],
+                clustering(grid), genotypes);
     }
 
-    private String genotypeKey(Agent agent) {
-        var genotype = agent.genotype();
-        return "" + genotype.firstMove() + genotype.afterCC() + genotype.afterCD()
-                + genotype.afterDC() + genotype.afterDD();
+    static double clustering(WorldGrid grid) {
+        long pairs = 0, same = 0;
+        int[][] directions = {{0, 1}, {1, 0}, {1, 1}, {1, -1}};
+        for (Agent agent : grid.livingAgents()) {
+            for (int[] d : directions) {
+                var neighbour = grid.agentAt(agent.position().moveBy(d[0], d[1], grid.sideLength()));
+                if (neighbour.isPresent()) {
+                    pairs++;
+                    if (agent.genotype().equals(neighbour.get().genotype())) same++;
+                }
+            }
+        }
+        return GenerationMetrics.ratio(same, pairs);
     }
 
     private List<CellPosition> allPositions(int sideLength) {

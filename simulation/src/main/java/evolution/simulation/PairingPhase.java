@@ -16,11 +16,24 @@ public final class PairingPhase {
     }
 
     public static List<AgentPair> formPairs(WorldGrid grid, RandomGenerator random) {
+        return formPairs(grid, random, PairingMode.LOCAL);
+    }
+
+    public static List<AgentPair> formPairs(WorldGrid grid, RandomGenerator random, PairingMode mode) {
+        Objects.requireNonNull(mode, "Pairing mode must be defined");
         Objects.requireNonNull(grid, "Grid must be defined");
         Objects.requireNonNull(random, "Random generator must be defined");
 
         List<Agent> order = new ArrayList<>(grid.livingAgents());
         shuffle(order, random);
+        if (mode == PairingMode.GLOBAL) {
+            List<AgentPair> pairs = new ArrayList<>();
+            for (int i = 0; i + 1 < order.size(); i += 2) {
+                Agent a = order.get(i), b = order.get(i + 1);
+                pairs.add(a.agentId() < b.agentId() ? new AgentPair(a, b) : new AgentPair(b, a));
+            }
+            return List.copyOf(pairs);
+        }
         Set<Agent> unpaired = new HashSet<>(order);
         List<AgentPair> pairs = new ArrayList<>();
 
