@@ -1,0 +1,28 @@
+name: Checks
+on: [push, pull_request]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew test installDist
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m pip install -r scripts/requirements.txt
+      - run: python -m unittest discover -s scripts -p 'test_*.py'
+      - name: Smoke test the complete experiment and report pipeline
+        run: |
+          simulation/build/install/simulation/bin/simulation --scenario all --repetitions 2 --generations 2 --threads 2 --snapshots --output results/smoke
+          python scripts/analyze.py results/smoke
+      - uses: actions/upload-artifact@v4
+        with:
+          name: smoke-report
+          path: results/smoke
