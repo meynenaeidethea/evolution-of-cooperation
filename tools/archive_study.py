@@ -10,7 +10,7 @@ for base in [Path(x) for x in ['simulation/src','profiles','tools','docs','.gith
     if not base.exists():raise FileNotFoundError(base)
     for f in (base.rglob('*') if base.is_dir() else [base]):
         if f.is_file() and not f.is_symlink() and (base in a.include or '__pycache__' not in f.parts):paths.add(f)
-for name in ['README.md','.gitignore','.gitattributes','settings.gradle.kts','gradle.properties','gradlew','gradlew.bat','simulation/build.gradle.kts']:
+for name in ['README.md','CHANGELOG.md','.gitignore','.gitattributes','settings.gradle.kts','gradle.properties','gradlew','gradlew.bat','simulation/build.gradle.kts']:
     paths.add(Path(name))
 def git(*args):
     r=subprocess.run(['git',*args],capture_output=True,text=True);return r.stdout.strip() if r.returncode==0 else 'unavailable'
