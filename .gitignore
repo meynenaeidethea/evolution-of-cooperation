@@ -11,3 +11,14 @@ build
 .idea/
 *.iml
 out/
+# Research data stay local; explicitly selected small deliverables are in research/.
+results/
+archives/
+__pycache__/
+
+.venv/
+
+# Generated reports, figures, screenshots and raw data are optional release downloads.
+research/
+*.tar.gz
+*.bundle

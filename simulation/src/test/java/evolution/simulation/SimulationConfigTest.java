@@ -8,15 +8,23 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class SimulationConfigTest {
 
     @Test
-    void createsApprovedBaselineConfiguration() {
-        SimulationConfig config = SimulationConfig.baseline();
+    void rejectsEnergyOverflowEvenWhenTheBoundWouldOverflowLong() {
+        assertThrows(IllegalArgumentException.class, () -> new SimulationConfig(3,1,1,Integer.MAX_VALUE,
+                1000,400,100,.1,Integer.MAX_VALUE,.8,.01,3,1));
+        assertThrows(IllegalArgumentException.class, () -> new SimulationConfig(3,1,1000,100,
+                1000,400,100,.1,100000,.8,.01,3,1));
+    }
 
-        assertEquals(30, config.sideLength());
-        assertEquals(450, config.populationSize());
-        assertEquals(5, config.roundsPerMatch());
-        assertEquals(1_000, config.initialEnergyHundredths());
-        assertEquals(20, config.gamePayoffWeightHundredths());
-        assertEquals(100, config.maximumGenerations());
+    @Test
+    void initializesWorldUsingChosenBaselineConfiguration() {
+        SimulationConfig config = SimulationConfig.baseline();
+        var initial = new SimulationSession(config, 1).currentSnapshot();
+        assertEquals(config.sideLength(), initial.sideLength());
+        assertEquals(config.populationSize(), initial.agents().size());
+        assertEquals(config.populationSize(), initial.agents().stream().map(a -> a.position()).distinct().count());
+        for (var agent : initial.agents()) {
+            assertEquals(config.initialEnergyHundredths(), agent.energyHundredths());
+        }
     }
 
     @Test

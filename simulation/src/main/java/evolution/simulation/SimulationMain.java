@@ -9,7 +9,7 @@ public final class SimulationMain {
     private SimulationMain() {
     }
 
-    public static void main(String[] args) throws Exception {
+    static void main(String[] args) throws Exception {
         Path outputDirectory = args.length == 0 ? Path.of("results") : Path.of(args[0]);
         SimulationRunner runner = new SimulationRunner();
         List<SimulationRunResult> runs = new ArrayList<>();

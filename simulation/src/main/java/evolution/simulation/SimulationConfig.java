@@ -39,6 +39,16 @@ public record SimulationConfig(
         if (gamePayoffWeightHundredths < 0) {
             throw new IllegalArgumentException("Game payoff weight must not be negative");
         }
+        long maximumTickGain;
+        try {
+            maximumTickGain = Math.addExact(resourceEnergyHundredths,
+                    Math.multiplyExact(5L * roundsPerMatch, gamePayoffWeightHundredths));
+        } catch (ArithmeticException e) {
+            throw new IllegalArgumentException("Energy bound exceeds long range", e);
+        }
+        if (maximumTickGain > (Integer.MAX_VALUE - (long) initialEnergyHundredths) / ticksPerGeneration) {
+            throw new IllegalArgumentException("Energy can overflow integer hundredths within a generation");
+        }
         requireProbability(resourceSpawnProbability, "Resource spawn probability");
         requireProbability(crossoverProbability, "Crossover probability");
         requireProbability(mutationProbability, "Mutation probability");
@@ -53,19 +63,19 @@ public record SimulationConfig(
 
     public static SimulationConfig baseline() {
         return new SimulationConfig(
-                30,
-                450,
-                50,
+                100,
+                300,
+                1000,
                 5,
-                1_000,
+                10_000,
                 400,
                 100,
-                0.10,
+                0.01,
                 20,
-                0.80,
+                0.9,
                 0.01,
                 3,
-                100
+                20
         );
     }
 
