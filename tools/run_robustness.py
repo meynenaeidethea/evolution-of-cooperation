@@ -9,6 +9,7 @@ from pathlib import Path
 
 from analyze_study import load
 from finalize_materials import assemble
+from verify_artifacts import checksums
 
 PROFILES = ('reference', 'small', 'large', 'sparse', 'dense', 'long')
 
@@ -31,7 +32,13 @@ def run(label, resume):
                     raise FileExistsError(data)
                 options.append('--resume')
             subprocess.run(['./gradlew', ':simulation:runStudy', '--args=' + ' '.join(options)], check=True)
-        load(data)  # Always validate completed data, including resume invocations.
+        checksums(data)
+        if (data / 'profile.properties').read_bytes() != Path(f'profiles/robustness/{name}.properties').read_bytes():
+            raise ValueError('Archived profile differs from requested profile: ' + name)
+        runs, *_ = load(data)
+        expected_seeds = range(20001, 20081 if name == 'reference' else 20041)
+        if set(runs) != {(s, seed) for s in scenarios.split(',') for seed in expected_seeds}:
+            raise ValueError('Seeds or scenarios differ from robustness protocol: ' + name)
         if not report.exists():
             pending = Path(tempfile.mkdtemp(prefix='.analysis-', dir=root)) / 'report'
             subprocess.run(['python3', 'tools/analyze_study.py', '--input', str(data), '--output', str(pending)], check=True)
