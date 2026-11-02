@@ -263,3 +263,12 @@ python3 tools/allele_diagnostics.py --input results/reproduction --output result
 5. Wilson E. B. Probable Inference, the Law of Succession, and Statistical Inference. *Journal of the American Statistical Association*, 1927, 22(158), 209–212. [Страница издателя](https://www.tandfonline.com/doi/abs/10.1080/01621459.1927.10502953), DOI 10.1080/01621459.1927.10502953.
 
 Библиографические сведения проверены 20 октября 2026. Числа настоящей работы получены только из новой основной серии, не из литературы и не из прежних расчётов проекта.
+
+## Дополнение от 2 ноября 2026
+
+После завершения исходной работы проведена отдельная проверка переноса результатов:
+[протокол](robustness-protocol.md), [сводные оценки и интервалы](../research/robustness-20261102/results.md),
+[локальный HTML и график](../research/robustness-20261102/report.html). Она использует 1400 новых
+запусков и отдельные seed; численные результаты и гипотезы основной серии выше не переписываются.
+Текущие проверки реализации, поддержка восстановления и резервное хранение на GitHub описаны
+в [отчете о доработке](development-status.md).

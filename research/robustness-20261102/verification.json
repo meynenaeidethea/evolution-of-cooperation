@@ -1,0 +1,36 @@
+{
+  "runs": 1400,
+  "checksum_counts": {
+    "reference": 2132,
+    "small": 1132,
+    "large": 1132,
+    "sparse": 1134,
+    "dense": 1134,
+    "long": 1135
+  },
+  "directions": {
+    "normalized-1": {
+      "profiles": 5,
+      "negative": 5,
+      "positive": 0,
+      "ci_below_zero": 5,
+      "ci_above_zero": 0
+    },
+    "normalized-10": {
+      "profiles": 5,
+      "negative": 0,
+      "positive": 5,
+      "ci_below_zero": 0,
+      "ci_above_zero": 5
+    },
+    "global-matched": {
+      "profiles": 6,
+      "negative": 5,
+      "positive": 1,
+      "ci_below_zero": 0,
+      "ci_above_zero": 0
+    }
+  },
+  "protocol_sha256": "4b54b949ca595322a550037e75a1480c09811b5468cf865786970f2134d48e90",
+  "analysis_source_sha256": "a62a53e1206393daabac6c00b14e67c85cbd71f5c3e7b25b81237e687908f0ff"
+}
