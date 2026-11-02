@@ -51,6 +51,17 @@ tasks.register<JavaExec>("runVisual") {
     jvmArgs("--enable-native-access=ALL-UNNAMED")
 }
 
+tasks.register<JavaExec>("runExperiments") {
+    group = "application"
+    description = "Run reproducible experiment series (use --args='--help' for options)"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.experiment.ExperimentMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(25)
+    }
+}
+
 tasks.register<JavaExec>("analyzeExperiments") {
     group = "application"
     description = "Analyze saved experiment CSV (use --args='--help')"
@@ -74,3 +85,19 @@ tasks.named<Test>("test") {
     workingDir = rootProject.layout.projectDirectory.asFile
 }
 
+tasks.register<JavaExec>("runStudy") {
+    group = "application"
+    description = "Run the fixed research protocol with external profiles and per-run checkpoints"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.experiment.StudyMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
+    jvmArgs("-Xmx768m", "-Djava.awt.headless=true")
+}
+
+tasks.register<JavaExec>("exportStudyFrames") {
+    group = "application"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.experiment.StudyFramesMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
+    jvmArgs("-Djava.awt.headless=true")
+}
