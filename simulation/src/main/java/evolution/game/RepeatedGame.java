@@ -30,6 +30,7 @@ public class RepeatedGame {
         long cd = 0;
         long dc = 0;
         long dd = 0;
+        long[] uses = new long[4];
 
         for (int round = 0; round < rounds; round++) {
             RoundPayoff payoff = PrisonersDilemma.payoff(firstAction, secondAction);
@@ -42,6 +43,8 @@ public class RepeatedGame {
             }
 
             if (round < rounds - 1) {
+                uses[(firstAction == Action.C ? 0 : 2) + (secondAction == Action.C ? 0 : 1)]++;
+                uses[(secondAction == Action.C ? 0 : 2) + (firstAction == Action.C ? 0 : 1)]++;
                 Action nextFirstAction = firstGenotype.actionAfter(firstAction, secondAction);
                 Action nextSecondAction = secondGenotype.actionAfter(secondAction, firstAction);
                 firstAction = nextFirstAction;
@@ -50,6 +53,7 @@ public class RepeatedGame {
         }
 
         return new MatchResult(new MatchPayoff(firstTotal, secondTotal),
-                new GameStatistics(1, firstCooperation, cc, cd, dc, dd));
+                new GameStatistics(1, firstCooperation, cc, cd, dc, dd),
+                uses[0], uses[1], uses[2], uses[3]);
     }
 }

@@ -21,6 +21,7 @@ public final class SimulationRunner {
     public SimulationRunResult run(SimulationConfig config, long seed, PairingMode mode) {
         SimulationSession session = new SimulationSession(config, seed, mode);
         while (!session.isFinished()) {
+            if (Thread.currentThread().isInterrupted()) throw new java.util.concurrent.CancellationException("Simulation interrupted");
             session.advance();
         }
         return session.result();
@@ -79,15 +80,10 @@ public final class SimulationRunner {
             payoffs.put(pair.first(), match.payoff().firstAgentTotal());
             payoffs.put(pair.second(), match.payoff().secondAgentTotal());
             statistics = statistics.plus(match.statistics());
-            var a = pair.first().genotype().firstMove();
-            var b = pair.second().genotype().firstMove();
-            for (int r = 1; r < config.roundsPerMatch(); r++) {
-                uses[(a == evolution.game.Action.C ? 0 : 2) + (b == evolution.game.Action.C ? 0 : 1)]++;
-                uses[(b == evolution.game.Action.C ? 0 : 2) + (a == evolution.game.Action.C ? 0 : 1)]++;
-                var nextA = pair.first().genotype().actionAfter(a, b);
-                b = pair.second().genotype().actionAfter(b, a);
-                a = nextA;
-            }
+            uses[0] += match.afterCCUses();
+            uses[1] += match.afterCDUses();
+            uses[2] += match.afterDCUses();
+            uses[3] += match.afterDDUses();
         }
         return new TickGameResult(payoffs, statistics, uses);
     }

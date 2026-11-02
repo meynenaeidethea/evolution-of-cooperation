@@ -35,7 +35,7 @@ public final class SimulationApplication extends Application {
     private SimulationConfig config = SimulationConfig.baseline();
     private PairingMode activePairing = PairingMode.LOCAL;
     private String activeProfile = "user";
-    private final ComboBox<String> profile = new ComboBox<>();
+    private final ProfileSelector profile = new ProfileSelector();
     private final ComboBox<PairingMode> pairing = new ComboBox<>();
     private final Label parameters = new Label();
     private final SimulationHistory history = new SimulationHistory(config, 1);
@@ -60,12 +60,6 @@ public final class SimulationApplication extends Application {
 
     @Override
     public void start(Stage stage) {
-        profile.getItems().setAll("user", "research", "demo");
-        profile.setValue("user");
-        profile.setConverter(new StringConverter<>() {
-            public String toString(String p) { return p==null?"":switch(p) {case "user" -> "Пользовательский";case "research" -> "Исследование";default -> "Демонстрация";}; }
-            public String fromString(String p) { return p; }
-        });
         pairing.setConverter(new StringConverter<>() {
             public String toString(PairingMode p) { return p==null?"":switch(p) {case LOCAL -> "Локальные";case GLOBAL -> "Глобальные";case GLOBAL_MATCHED -> "Глобальные с бюджетом";}; }
             public PairingMode fromString(String p) { return PairingMode.valueOf(p); }
@@ -73,12 +67,12 @@ public final class SimulationApplication extends Application {
         pairing.getItems().setAll(PairingMode.values());pairing.setValue(PairingMode.LOCAL);
         parameters.setWrapText(true);
         String startupProfile=getParameters().getNamed().getOrDefault("profile","profiles/user.properties");
-        if(startupProfile!=null) {
-            String name=Path.of(startupProfile).getFileName().toString().replace(".properties","");
-            if(profile.getItems().contains(name)) profile.setValue(name);
-            try { config=ConfigProfiles.load(Path.of(startupProfile));history.newRun(config,1);activeProfile=startupProfile; }
-            catch(Exception e) { seedError.setText("Profile: "+e.getMessage()); }
-        }
+        try {
+            profile.select(Path.of(startupProfile));
+            config = ConfigProfiles.load(profile.selectedPath());
+            history.newRun(config, 1);
+            activeProfile = profile.selectedPath().toString();
+        } catch (Exception e) { seedError.setText("Ошибка профиля: " + e.getMessage()); }
         Button export=new Button("Экспорт кадра PNG + SVG");
         export.setOnAction(event -> {
             pause();
@@ -96,7 +90,7 @@ public final class SimulationApplication extends Application {
         newRun.setOnAction(event -> newRun());
         seedError.setStyle("-fx-text-fill: #b42318;");
         heading.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-        VBox top = new VBox(8, heading, new HBox(10, new Label("Seed:"), seed, newRun), new HBox(10, new Label("Профиль:"), profile, pairing, export), parameters, seedError);
+        VBox top = new VBox(8, heading, new HBox(10, new Label("Seed:"), seed, newRun), new HBox(10, profile, profile.openButton(stage, this::newRun, seedError::setText), pairing, export), parameters, seedError);
         top.setPadding(new Insets(0, 0, 12, 0));
 
         StackPane map = new StackPane(world);
@@ -191,9 +185,22 @@ public final class SimulationApplication extends Application {
         Path out=Path.of(getParameters().getNamed().get("smoke-dir"));
         try {
             java.nio.file.Files.createDirectory(out);
+            Path custom = out.resolve("user.properties");
+            java.nio.file.Files.copy(Path.of("profiles/demo.properties"), custom);
+            profile.select(custom);
+            seed.setText("17"); newRun();
+            if (!config.equals(ConfigProfiles.load(custom))) throw new IllegalStateException("Custom profile lost");
+            seed.setText("18"); newRun();
+            if (!profile.selectedPath().equals(custom.toAbsolutePath().normalize())
+                    || !config.equals(ConfigProfiles.load(custom))) throw new IllegalStateException("Custom restart lost");
+            Path invalid = out.resolve("invalid.properties");
+            java.nio.file.Files.writeString(invalid, "sideLength=20\n");
+            try { profile.select(invalid); throw new IllegalStateException("Invalid profile accepted"); }
+            catch (IllegalArgumentException expected) { /* Previous valid selection survives. */ }
+            if (!profile.selectedPath().equals(custom.toAbsolutePath().normalize())) throw new IllegalStateException("Invalid selection replaced profile");
             seed.setText("invalid");newRun();
             if(seedError.getText().isEmpty()) throw new IllegalStateException("Missing invalid-seed error");
-            profile.setValue("research");pairing.setValue(PairingMode.GLOBAL_MATCHED);seed.setText("10001");newRun();
+            profile.select(Path.of("profiles/research.properties"));pairing.setValue(PairingMode.GLOBAL_MATCHED);seed.setText("10001");newRun();
             long begin=System.nanoTime();
             for(int i=0;i<320;i++) history.stepForward();
             if(history.size()!=300 || history.toStart().elapsedTicks()!=21) throw new IllegalStateException("History window");
@@ -254,9 +261,9 @@ public final class SimulationApplication extends Application {
         }
         pause();
         try {
-            var next=ConfigProfiles.load(Path.of("profiles",profile.getValue()+".properties"));
+            var next=ConfigProfiles.load(profile.selectedPath());
             history.newRun(next, value, pairing.getValue());
-            config=next;activePairing=pairing.getValue();activeProfile=profile.getValue();
+            config=next;activePairing=pairing.getValue();activeProfile=profile.selectedPath().toString();
             seedError.setText("");
         } catch(Exception e) { seedError.setText("Ошибка запуска: "+e.getMessage()); }
         refresh();

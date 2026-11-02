@@ -125,6 +125,18 @@ class ResearchControlsTest {
         }
         assertTrue(after.resources().isEmpty());
     }
+    @Test void customStudyControlsChangeOnlyTheirIntendedFields() {
+        var config = cfg(2,37,.8,.03);
+        var scenarios = StudyMain.scenarios(config);
+        var mutationZero = scenarios.stream().filter(sc -> sc.id().equals("mutation-zero")).findFirst().orElseThrow().config();
+        assertEquals(2, mutationZero.roundsPerMatch());
+        assertEquals(37, mutationZero.gamePayoffWeightHundredths());
+        assertEquals(0, mutationZero.mutationProbability());
+        var roundsOne = scenarios.stream().filter(sc -> sc.id().equals("rounds-1")).findFirst().orElseThrow().config();
+        assertEquals(37, roundsOne.gamePayoffWeightHundredths());
+        assertEquals(.03, roundsOne.mutationProbability());
+    }
+
     @Test void externalProfilesAreStrictAndStudyControlsHaveFixedScale() throws Exception {
         Path p=temp.resolve("bad.properties"); Files.writeString(p,"sideLength=20\n");
         assertThrows(IllegalArgumentException.class,()->ConfigProfiles.load(p));

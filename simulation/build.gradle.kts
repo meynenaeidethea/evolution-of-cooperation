@@ -82,6 +82,7 @@ java {
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+    workingDir = rootProject.layout.projectDirectory.asFile
 }
 
 tasks.register<JavaExec>("runStudy") {

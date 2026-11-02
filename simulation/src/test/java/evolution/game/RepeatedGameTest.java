@@ -33,6 +33,17 @@ class RepeatedGameTest {
     }
 
     @Test
+    void recordsConditionalUsesFromBothPlayersInThePayoffGame() {
+        Genotype titForTat = new Genotype(Action.C, Action.C, Action.D, Action.C, Action.D);
+        var result = RepeatedGame.playDetailed(titForTat, ALWAYS_DEFECT, 5);
+        assertEquals(new MatchPayoff(4, 9), result.payoff());
+        assertEquals(0, result.afterCCUses());
+        assertEquals(1, result.afterCDUses());
+        assertEquals(1, result.afterDCUses());
+        assertEquals(6, result.afterDDUses());
+    }
+
+    @Test
     void rejectsZeroRounds() {
         assertThrows(
                 IllegalArgumentException.class,

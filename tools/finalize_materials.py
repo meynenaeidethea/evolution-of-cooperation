@@ -1,44 +1,111 @@
 #!/usr/bin/env python3
-"""Assemble portable figures/tables without changing any estimates or primary data."""
-import argparse,csv,hashlib,html,json,shutil
+"""Assemble a portable report; every numerical statement comes from its supplied data."""
+import argparse
+import csv
+import hashlib
+import html
+import json
+import math
+import shutil
+import xml.etree.ElementTree as ET
 from pathlib import Path
-p=argparse.ArgumentParser();p.add_argument('--report',type=Path,required=True);p.add_argument('--data',type=Path,required=True)
-p.add_argument('--frames',type=Path,required=True);p.add_argument('--output',type=Path,required=True);a=p.parse_args()
-info=json.loads((a.report/'analysis.json').read_text())
-for name,digest in info['input_sha256'].items():
-    if hashlib.sha256((a.data/name).read_bytes()).hexdigest()!=digest:raise ValueError('Input changed: '+name)
-shutil.copytree(a.report,a.output)
-shutil.copytree(a.frames,a.output/'maps')
-text=(a.output/'report.html').read_text()
-metadata=list(csv.DictReader((a.data/'runs.csv').open()))
-scenarios={}
-for r in metadata:scenarios.setdefault(r['scenario_id'],r)
-cols=list(next(iter(scenarios.values())))
-table='<details><summary>Все параметры и метаданные типичного запуска каждого сценария</summary><div style="overflow:auto"><table><tr>'+''.join('<th>'+html.escape(c)+'</th>' for c in cols)+'</tr>'
-for r in scenarios.values():table+='<tr>'+''.join('<td>'+html.escape(r[c])+'</td>' for c in cols)+'</tr>'
-table+='</table></div><p>В каждой группе seed 10001–10040; все повторы: исходный runs.csv.</p></details>'
-text=text.replace('<h2>Конечная точка</h2>',table+'<h2>Конечная точка</h2>')
-text=text.replace('../'+a.data.name+'/manifest.txt','../../results/'+a.data.name+'/manifest.txt')
-interpretation='''<h2>Интерпретация результатов</h2>
-<p>Ключевой результат — сильная зависимость от повторяемости при фиксированной памяти одного раунда. В нормированном ряду при K=1 C=0.004, при K=5 C=0.487, при K=10 C=0.797. Конечные популяции часто разделяются на почти полностью сотрудничающие и почти полностью отказывающиеся; среднее не описывает типичную отдельную популяцию.</p>
-<p>Без игрового дохода C=0.479 близка к baseline, но доля CCD?? лишь 0.129 против 0.434 и выживаемость 0.240 против 0.995. Поведенческая C сама по себе не доказывает отбора условной взаимности.</p>
-<p>При нулевой мутации C=0.050: 38 из 40 запусков теряют аллель первого C. Это разведочная проверка механизма по уже сохранённым данным, не новая подтверждающая гипотеза. При мутации .05 средняя C ниже baseline, но одновременный интервал эффекта включает ноль. Утверждение «чем меньше мутация, тем лучше» данными отвергается.</p>
-<p>Результаты local/global неточны: для global-matched разность C −0.202, описательный 95% CI [−0.407; 0.006], одновременный интервал ещё шире. Ресурсные режимы меняют энергетику, но направление влияния на C надёжно не установлено. Нет доказательства эквивалентности.</p>
-<p>Ни одного вымирания за 40 запусков на сценарий; Wilson 95% верхняя граница риска 0.088. Горизонт 60 и один размер мира не позволяют утверждать бессрочную устойчивость.</p>
-<p><a href="../../docs/research-paper.md">Полная пояснительная записка</a> · <a href="../../docs/research-protocol.md">Протокол</a> · <a href="../../docs/defense.md">Защита и демонстрация</a></p>
-'''
-text=text.replace('<h2>Методика и ограничения</h2>',interpretation+'<h2>Методика и ограничения</h2>')
-maps='<h2>Карты заранее выбранного seed 10001</h2><p>Поколения 1, 30, 60: <a href="maps/">все карты PNG/SVG</a>. Выбор seed сделан до основной серии. Эти иллюстрации не представляют распределение всех 40 запусков.</p>'
-for s in ['baseline','global','global-matched']:
-    maps+=f'<figure><img src="maps/{s}-g60.png.svg" alt="{s}, seed 10001, generation 60"><figcaption>{s}, seed 10001, поколение 60; ресурс показан поверх агента.</figcaption></figure>'
-text=text.replace('<h2>Прослеживаемость</h2>',maps+'<h2>Прослеживаемость</h2>')
-(a.output/'report.html').write_text(text)
-# A complete, explicit classification appendix for the defense.
-lines=['# Все генотипы и стандартные встречи','', 'Порядок генов: первый ход, CC, CD, DC, DD. «Условный» означает ровно CCD??.',
-       'Стандартная C — доля собственных действий C против равновзвешенных 32 оппонентов по 10 раундов. Это отдельный тестовый стенд, не среда эксперимента.',
-       '', '| Генотип | CCD?? | Непостоянные реакции | Стандартная C | Средняя выплата/раунд |', '|---|---|---|---|---|']
-for r in csv.DictReader((a.output/'strategy-catalogue.csv').open()):
-    lines.append(f"| {r['genotype']} | {r['conditional']} | {r['nonconstant']} | {float(r['standard_C']):.3f} | {float(r['standard_payoff']):.3f} |")
-lines+=['','Полные последовательности: [standard-matches.csv](standard-matches.csv). Классы эквивалентности: [behavioral-equivalence.csv](behavioral-equivalence.csv).']
-(a.output/'strategy-catalogue.md').write_text('\n'.join(lines)+'\n')
-print(a.output/'report.html')
+
+
+def read(path):
+    with path.open(newline='', encoding='utf-8') as handle:
+        return list(csv.DictReader(handle))
+
+
+def number(value):
+    return f'{float(value):.3f}' if value and math.isfinite(float(value)) else '—'
+
+
+def assemble(report, data, frames, output):
+    info = json.loads((report / 'analysis.json').read_text())
+    expected = {'runs.csv', 'generations.csv', 'genotype-frequencies.csv'}
+    if set(info['input_sha256']) != expected:
+        raise ValueError('Analysis must identify exactly the three scientific input CSV')
+    for name, digest in info['input_sha256'].items():
+        if hashlib.sha256((data / name).read_bytes()).hexdigest() != digest:
+            raise ValueError('Input changed: ' + name)
+    metadata = read(data / 'runs.csv')
+    summary = read(report / 'summary.csv')
+    effects = read(report / 'effects.csv')
+    extinction = read(report / 'extinction.csv')
+    scenarios = {}
+    for row in metadata:
+        scenarios.setdefault(row['scenario_id'], []).append(row)
+    if not scenarios or set(scenarios) != {r['scenario'] for r in summary}:
+        raise ValueError('Analysis scenarios do not match input runs')
+    shutil.copytree(report, output)  # Refuse overwriting any existing report.
+    (output / 'inputs').mkdir()
+    for name in ['manifest.txt', 'runs.csv']:
+        shutil.copy2(data / name, output / 'inputs' / name)
+    text = (output / 'report.html').read_text()
+    text = text.replace('../' + html.escape(data.name) + '/manifest.txt', 'inputs/manifest.txt')
+    cols = list(metadata[0])
+    table = '<details><summary>Параметры и метаданные сценариев</summary><div style="overflow:auto"><table><tr>'
+    table += ''.join('<th>' + html.escape(c) + '</th>' for c in cols) + '</tr>'
+    for rows in scenarios.values():
+        table += '<tr>' + ''.join('<td>' + html.escape(rows[0][c]) + '</td>' for c in cols) + '</tr>'
+    table += '</table></div><p>Фактические seed и число запусков: '
+    table += '; '.join(f'{html.escape(s)}: n={len(rows)}, seed {min(int(r["seed"]) for r in rows)}–'
+                       f'{max(int(r["seed"]) for r in rows)}' for s, rows in scenarios.items())
+    table += '. Полный список: <a href="inputs/runs.csv">runs.csv</a>.</p></details>'
+    text = text.replace('<h2>Конечная точка</h2>', table + '<h2>Конечная точка</h2>')
+
+    interpretation = '<h2>Результаты переданной серии</h2><p>Числа ниже вычислены из этой серии. ' \
+                     'Они не заменяют научную интерпретацию и не переносят выводы исходного исследования.</p><ul>'
+    for r in summary:
+        if r['metric'] in ['cooperation', 'conditional', 'survival']:
+            interpretation += (f'<li>{html.escape(r["scenario"])} / {html.escape(r["metric"])}: '
+                               f'{number(r["mean"])}, 95% CI [{number(r["low"])}; {number(r["high"])}], '
+                               f'n={int(r["n"])}.</li>')
+    interpretation += '</ul><p>Парные разности относительно baseline (описательные 95% CI):</p><ul>'
+    for r in effects:
+        if r['reference'] == 'baseline' and r['metric'] == 'cooperation':
+            interpretation += (f'<li>{html.escape(r["scenario"])}: {number(r["mean"])} '
+                               f'[{number(r["low"])}; {number(r["high"])}], n={int(r["n"])}.</li>')
+    interpretation += '</ul><p>Вымирание к концу наблюдения:</p><ul>'
+    for r in extinction:
+        interpretation += (f'<li>{html.escape(r["scenario"])}: {int(r["extinctions"])}/{int(r["n"])}, '
+                           f'верхняя 95% Wilson-граница риска {number(r["high"])}.</li>')
+    interpretation += '</ul>'
+    text = text.replace('<h2>Методика и ограничения</h2>', interpretation + '<h2>Методика и ограничения</h2>')
+
+    if frames is not None:
+        shutil.copytree(frames, output / 'maps')
+        maps = '<h2>Иллюстративные карты</h2><p>Отдельные траектории; seed и такт указаны на каждой карте.</p>'
+        for image in sorted((output / 'maps').glob('*.png')):
+            svg = Path(str(image) + '.svg')
+            caption = image.stem
+            if svg.exists():
+                root = ET.parse(svg).getroot()
+                caption = next(root.iter('{http://www.w3.org/2000/svg}text')).text or caption
+            filename = svg.name if svg.exists() else image.name
+            maps += (f'<figure><img src="maps/{html.escape(filename)}" alt="{html.escape(caption)}">'
+                     f'<figcaption>{html.escape(caption)}</figcaption></figure>')
+        text = text.replace('<h2>Прослеживаемость</h2>', maps + '<h2>Прослеживаемость</h2>')
+    (output / 'report.html').write_text(text, encoding='utf-8')
+
+    lines = ['# Все генотипы и стандартные встречи', '',
+             'Порядок генов: первый ход, CC, CD, DC, DD. «Условный» означает ровно CCD??.',
+             'Стандартная C — доля собственных действий C против 32 оппонентов по 10 раундов; это отдельный стенд.', '',
+             '| Генотип | CCD?? | Непостоянные реакции | Стандартная C | Средняя выплата/раунд |',
+             '|---|---|---|---|---|']
+    for r in read(output / 'strategy-catalogue.csv'):
+        lines.append(f'| {r["genotype"]} | {r["conditional"]} | {r["nonconstant"]} | '
+                     f'{number(r["standard_C"])} | {number(r["standard_payoff"])} |')
+    lines += ['', '[Все встречи](standard-matches.csv). [Классы эквивалентности](behavioral-equivalence.csv).']
+    (output / 'strategy-catalogue.md').write_text('\n'.join(lines) + '\n', encoding='utf-8')
+    return output / 'report.html'
+
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--report', type=Path, required=True)
+    parser.add_argument('--data', type=Path, required=True)
+    parser.add_argument('--frames', type=Path)
+    parser.add_argument('--output', type=Path, required=True)
+    args = parser.parse_args()
+    print(assemble(args.report, args.data, args.frames, args.output))
