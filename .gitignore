@@ -11,3 +11,9 @@ build
 .idea/
 *.iml
 out/
+# Research data stay local; explicitly selected small deliverables are in research/.
+results/
+archives/
+__pycache__/
+
+.venv/

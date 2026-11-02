@@ -54,7 +54,7 @@ public final class Agent {
     }
 
     public void changeEnergyBy(int changeHundredths) {
-        energyHundredths += changeHundredths;
+        energyHundredths = Math.addExact(energyHundredths, changeHundredths);
     }
 
     public void die() {

@@ -1,6 +1,7 @@
 package evolution.ui;
 
-import evolution.simulation.SimulationConfig;
+import evolution.simulation.*;
+import java.nio.file.Path;
 import evolution.simulation.SimulationHistory;
 import evolution.analysis.MetricTimeline;
 import javafx.animation.Animation;
@@ -31,10 +32,15 @@ import javafx.util.StringConverter;
 import java.util.Locale;
 
 public final class SimulationApplication extends Application {
-    private final SimulationConfig config = SimulationConfig.baseline();
+    private SimulationConfig config = SimulationConfig.baseline();
+    private PairingMode activePairing = PairingMode.LOCAL;
+    private String activeProfile = "user";
+    private final ComboBox<String> profile = new ComboBox<>();
+    private final ComboBox<PairingMode> pairing = new ComboBox<>();
+    private final Label parameters = new Label();
     private final SimulationHistory history = new SimulationHistory(config, 1);
     private final WorldCanvas world = new WorldCanvas();
-    private final MetricCharts charts = new MetricCharts(tick -> navigate(() -> history.seek(Math.toIntExact(tick))));
+    private final MetricCharts charts = new MetricCharts(tick -> navigate(() -> history.seek(history.nearestIndex(tick))));
     private final Tab chartsTab = new Tab("Графики", charts);
     private long lastChartUpdate;
     private final TextField seed = new TextField("1");
@@ -54,6 +60,34 @@ public final class SimulationApplication extends Application {
 
     @Override
     public void start(Stage stage) {
+        profile.getItems().setAll("user", "research", "demo");
+        profile.setValue("user");
+        profile.setConverter(new StringConverter<>() {
+            public String toString(String p) { return p==null?"":switch(p) {case "user" -> "Пользовательский";case "research" -> "Исследование";default -> "Демонстрация";}; }
+            public String fromString(String p) { return p; }
+        });
+        pairing.setConverter(new StringConverter<>() {
+            public String toString(PairingMode p) { return p==null?"":switch(p) {case LOCAL -> "Локальные";case GLOBAL -> "Глобальные";case GLOBAL_MATCHED -> "Глобальные с бюджетом";}; }
+            public PairingMode fromString(String p) { return PairingMode.valueOf(p); }
+        });
+        pairing.getItems().setAll(PairingMode.values());pairing.setValue(PairingMode.LOCAL);
+        parameters.setWrapText(true);
+        String startupProfile=getParameters().getNamed().getOrDefault("profile","profiles/user.properties");
+        if(startupProfile!=null) {
+            String name=Path.of(startupProfile).getFileName().toString().replace(".properties","");
+            if(profile.getItems().contains(name)) profile.setValue(name);
+            try { config=ConfigProfiles.load(Path.of(startupProfile));history.newRun(config,1);activeProfile=startupProfile; }
+            catch(Exception e) { seedError.setText("Profile: "+e.getMessage()); }
+        }
+        Button export=new Button("Экспорт кадра PNG + SVG");
+        export.setOnAction(event -> {
+            pause();
+            var chooser=new javafx.stage.FileChooser();chooser.setInitialFileName("world-seed-"+history.currentSnapshot().seed()+"-tick-"+history.currentSnapshot().elapsedTicks()+".png");
+            var file=chooser.showSaveDialog(stage);
+            if(file!=null) try { SnapshotExporter.write(file.toPath(),history.currentSnapshot(),"UI "+activePairing); seedError.setText("Кадр сохранён: "+file); }
+            catch(Exception e) {seedError.setText("Ошибка экспорта: "+e.getMessage());}
+            refresh();
+        });
         timeline.setCycleCount(Animation.INDEFINITE);
         seed.setPrefColumnCount(18);
         seed.setTooltip(new Tooltip("Seed типа long; тот же seed воспроизводит тот же запуск"));
@@ -62,7 +96,7 @@ public final class SimulationApplication extends Application {
         newRun.setOnAction(event -> newRun());
         seedError.setStyle("-fx-text-fill: #b42318;");
         heading.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-        VBox top = new VBox(8, heading, new HBox(10, new Label("Seed:"), seed, newRun), seedError);
+        VBox top = new VBox(8, heading, new HBox(10, new Label("Seed:"), seed, newRun), new HBox(10, new Label("Профиль:"), profile, pairing, export), parameters, seedError);
         top.setPadding(new Insets(0, 0, 12, 0));
 
         StackPane map = new StackPane(world);
@@ -106,7 +140,7 @@ public final class SimulationApplication extends Application {
                 refresh();
             }
         });
-        speed.getItems().setAll(1, 2, 5, 10, 20);
+        speed.getItems().setAll(1, 2, 5, 10, 20, 50);
         speed.setConverter(new StringConverter<>() {
             @Override
             public String toString(Integer value) {
@@ -119,7 +153,7 @@ public final class SimulationApplication extends Application {
             }
         });
         speed.setValue(1);
-        speed.setTooltip(new Tooltip("Скорость автовоспроизведения: 1× = 5 тактов/с, 20× = 100 тактов/с"));
+        speed.setTooltip(new Tooltip("Скорость автовоспроизведения: 1× = 5 тактов/с, 20× = 100 тактов/с, 50× = 250 тактов/с"));
         speed.valueProperty().addListener((observable, before, after) -> {
             if (after != null) {
                 timeline.setRate(after);
@@ -149,6 +183,45 @@ public final class SimulationApplication extends Application {
         stage.setMinHeight(600);
         refresh();
         stage.show();
+        if(getParameters().getNamed().containsKey("smoke-dir")) javafx.application.Platform.runLater(() -> smoke(stage,views));
+    }
+
+    /** Opt-in integration check runs the real JavaFX scene and exports reviewable evidence. */
+    private void smoke(Stage stage,TabPane views) {
+        Path out=Path.of(getParameters().getNamed().get("smoke-dir"));
+        try {
+            java.nio.file.Files.createDirectory(out);
+            seed.setText("invalid");newRun();
+            if(seedError.getText().isEmpty()) throw new IllegalStateException("Missing invalid-seed error");
+            profile.setValue("research");pairing.setValue(PairingMode.GLOBAL_MATCHED);seed.setText("10001");newRun();
+            long begin=System.nanoTime();
+            for(int i=0;i<320;i++) history.stepForward();
+            if(history.size()!=300 || history.toStart().elapsedTicks()!=21) throw new IllegalStateException("History window");
+            history.toEnd();refresh();
+            SnapshotExporter.write(out.resolve("selected-frame.png"),history.currentSnapshot(),"UI global-matched");
+            stage.getScene().getRoot().applyCss();stage.getScene().getRoot().layout();
+            saveScene(stage,out.resolve("world-ui.png"));
+            views.getSelectionModel().select(chartsTab);refreshCharts(true);
+            history.seek(history.nearestIndex(300));refresh();
+            stage.getScene().getRoot().applyCss();stage.getScene().getRoot().layout();
+            saveScene(stage,out.resolve("charts-ui.png"));
+            speed.setValue(50);play.fire();
+            var wait=new javafx.animation.PauseTransition(Duration.millis(250));
+            wait.setOnFinished(event -> {
+                try {
+                    play.fire();
+                    if(isPlaying() || history.currentSnapshot().elapsedTicks()<=300) throw new IllegalStateException("Playback/pause");
+                    java.nio.file.Files.writeString(out.resolve("success.txt"),"JavaFX scene, profile, seed validation, 320 ticks, history cap, replay, charts, frame export, speed/play/pause: PASS\nseconds="+(System.nanoTime()-begin)/1e9+"\n");
+                    stage.close();javafx.application.Platform.exit();
+                } catch(Exception e) { e.printStackTrace();System.exit(1); }
+            });wait.play();
+        } catch(Exception e) { e.printStackTrace();System.exit(1); }
+    }
+    private void saveScene(Stage stage,Path file) throws java.io.IOException {
+        var fx=stage.getScene().getRoot().snapshot(null,null);
+        var img=new java.awt.image.BufferedImage((int)fx.getWidth(),(int)fx.getHeight(),java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        for(int y=0;y<img.getHeight();y++) for(int x=0;x<img.getWidth();x++) img.setRGB(x,y,fx.getPixelReader().getArgb(x,y));
+        javax.imageio.ImageIO.write(img,"png",file.toFile());
     }
 
     private VBox legend() {
@@ -180,8 +253,12 @@ public final class SimulationApplication extends Application {
             return;
         }
         pause();
-        history.newRun(config, value);
-        seedError.setText("");
+        try {
+            var next=ConfigProfiles.load(Path.of("profiles",profile.getValue()+".properties"));
+            history.newRun(next, value, pairing.getValue());
+            config=next;activePairing=pairing.getValue();activeProfile=profile.getValue();
+            seedError.setText("");
+        } catch(Exception e) { seedError.setText("Ошибка запуска: "+e.getMessage()); }
         refresh();
     }
 
@@ -192,7 +269,8 @@ public final class SimulationApplication extends Application {
     }
 
     private void advance() {
-        history.stepForward();
+        try { history.stepForward(); }
+        catch(RuntimeException e) { pause(); seedError.setText("Ошибка расчёта: "+e.getMessage()); return; }
         if (!history.canStepForward()) {
             pause();
         }
@@ -214,6 +292,13 @@ public final class SimulationApplication extends Application {
         var games = generation.gameStatistics();
         world.show(snapshot);
         refreshCharts(!isPlaying());
+        parameters.setText(String.format(Locale.ROOT,
+                "Активный профиль: %s | %s | Мир %d×%d, агентов %d, тактов/поколение %d, поколений %d, раундов %d\n"
+                + "Энергия: начальная %.2f, ресурс %.2f, стоимость такта %.2f, вес игры %.2f | q=%.3f, скрещивание=%.2f, мутация=%.3f, турнир=%d | %s",
+                activeProfile,pairing.getConverter().toString(activePairing),config.sideLength(),config.sideLength(),config.populationSize(),
+                config.ticksPerGeneration(),config.maximumGenerations(),config.roundsPerMatch(),config.initialEnergyHundredths()/100.,
+                config.resourceEnergyHundredths()/100.,config.livingCostHundredths()/100.,config.gamePayoffWeightHundredths()/100.,
+                config.resourceSpawnProbability(),config.crossoverProbability(),config.mutationProbability(),config.tournamentSize(),SimulationSession.MODEL_VERSION));
         heading.setText("Поколение " + snapshot.generation() + " / " + config.maximumGenerations()
                 + "   ·   Такт " + snapshot.tick() + " / " + config.ticksPerGeneration());
         String status = switch (snapshot.status()) {
@@ -236,7 +321,8 @@ public final class SimulationApplication extends Application {
                 + "\nЗапуск: " + status
                 + "\nПросмотр: " + (isPlaying() ? "Автовоспроизведение" : "Пауза"));
         savedTick.setText("Сохранённый такт: " + snapshot.elapsedTicks()
-                + " / " + (history.size() - 1) + "   ·   Снимков: " + history.size());
+                + "   ·   Снимков: " + history.size() + "/" + history.capacity()
+                + " (окно истории; более ранние удаляются). Первый доступный такт: " + history.snapshots().getFirst().elapsedTicks());
         refreshing = true;
         try {
             slider.setMax(Math.max(1, history.size() - 1));

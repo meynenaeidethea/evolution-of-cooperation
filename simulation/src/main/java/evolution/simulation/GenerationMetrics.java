@@ -18,7 +18,8 @@ public record GenerationMetrics(
         double averageGamePayoff,
         long gameEnergyHundredths,
         double spatialClustering,
-        boolean extinct
+        boolean extinct,
+        long agentTicks, long afterCCUses, long afterCDUses, long afterDCUses, long afterDDUses
 ) {
     public GenerationMetrics {
         genotypeCounts = Map.copyOf(genotypeCounts);

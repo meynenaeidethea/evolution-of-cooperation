@@ -71,6 +71,7 @@ public final class SimulationRunner {
     TickGameResult playPairs(WorldGrid grid, SimulationConfig config, RandomGenerator random, PairingMode mode) {
         Map<Agent, Integer> payoffs = new LinkedHashMap<>();
         GameStatistics statistics = GameStatistics.EMPTY;
+        long[] uses = new long[4];
         for (AgentPair pair : PairingPhase.formPairs(grid, random, mode)) {
             var match = RepeatedGame.playDetailed(
                     pair.first().genotype(), pair.second().genotype(), config.roundsPerMatch()
@@ -78,8 +79,17 @@ public final class SimulationRunner {
             payoffs.put(pair.first(), match.payoff().firstAgentTotal());
             payoffs.put(pair.second(), match.payoff().secondAgentTotal());
             statistics = statistics.plus(match.statistics());
+            var a = pair.first().genotype().firstMove();
+            var b = pair.second().genotype().firstMove();
+            for (int r = 1; r < config.roundsPerMatch(); r++) {
+                uses[(a == evolution.game.Action.C ? 0 : 2) + (b == evolution.game.Action.C ? 0 : 1)]++;
+                uses[(b == evolution.game.Action.C ? 0 : 2) + (a == evolution.game.Action.C ? 0 : 1)]++;
+                var nextA = pair.first().genotype().actionAfter(a, b);
+                b = pair.second().genotype().actionAfter(b, a);
+                a = nextA;
+            }
         }
-        return new TickGameResult(payoffs, statistics);
+        return new TickGameResult(payoffs, statistics, uses);
     }
 
     private List<CellPosition> allPositions(int sideLength) {

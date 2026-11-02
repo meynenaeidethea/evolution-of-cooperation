@@ -44,6 +44,7 @@ tasks.register<JavaExec>("runVisual") {
     description = "Open the interactive simulation window"
     classpath = sourceSets.main.get().runtimeClasspath
     mainClass = "evolution.ui.SimulationVisualMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
     javaLauncher = javaToolchains.launcherFor {
         languageVersion = JavaLanguageVersion.of(25)
     }
@@ -81,4 +82,21 @@ java {
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+}
+
+tasks.register<JavaExec>("runStudy") {
+    group = "application"
+    description = "Run the fixed research protocol with external profiles and per-run checkpoints"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.experiment.StudyMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
+    jvmArgs("-Xmx768m", "-Djava.awt.headless=true")
+}
+
+tasks.register<JavaExec>("exportStudyFrames") {
+    group = "application"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.experiment.StudyFramesMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
+    jvmArgs("-Djava.awt.headless=true")
 }

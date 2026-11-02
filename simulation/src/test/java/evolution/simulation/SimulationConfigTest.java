@@ -8,6 +8,14 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 class SimulationConfigTest {
 
     @Test
+    void rejectsEnergyOverflowEvenWhenTheBoundWouldOverflowLong() {
+        assertThrows(IllegalArgumentException.class, () -> new SimulationConfig(3,1,1,Integer.MAX_VALUE,
+                1000,400,100,.1,Integer.MAX_VALUE,.8,.01,3,1));
+        assertThrows(IllegalArgumentException.class, () -> new SimulationConfig(3,1,1000,100,
+                1000,400,100,.1,100000,.8,.01,3,1));
+    }
+
+    @Test
     void initializesWorldUsingChosenBaselineConfiguration() {
         SimulationConfig config = SimulationConfig.baseline();
         var initial = new SimulationSession(config, 1).currentSnapshot();

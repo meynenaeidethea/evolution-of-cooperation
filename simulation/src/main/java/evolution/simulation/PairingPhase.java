@@ -21,10 +21,11 @@ public final class PairingPhase {
         Objects.requireNonNull(grid, "Grid must be defined");
         Objects.requireNonNull(random, "Random generator must be defined");
         // A uniform shuffled matching: each living agent plays at most once; one is left out if odd.
+        int limit = mode == PairingMode.GLOBAL_MATCHED ? formPairs(grid, random).size() : Integer.MAX_VALUE;
         List<Agent> order = new ArrayList<>(grid.livingAgents());
         shuffle(order, random);
         List<AgentPair> pairs = new ArrayList<>();
-        for (int i = 0; i + 1 < order.size(); i += 2) {
+        for (int i = 0; i + 1 < order.size() && pairs.size() < limit; i += 2) {
             Agent first = order.get(i);
             Agent second = order.get(i + 1);
             pairs.add(first.agentId() < second.agentId() ? new AgentPair(first, second) : new AgentPair(second, first));

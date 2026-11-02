@@ -63,7 +63,7 @@ class CsvResultsWriterTest {
         assertEquals("0.01", first.get("mutation_probability"));
         assertEquals("3", first.get("tournament_size"));
         assertEquals("2", first.get("maximum_generations"));
-        assertEquals("genetic-v1", first.get("model_version"));
+        assertEquals(SimulationSession.MODEL_VERSION, first.get("model_version"));
         assertEquals("L64X128MixRandom", first.get("random_generator"));
         assertEquals(Runtime.version().toString(), first.get("java_version"));
         assertEquals("false", first.get("extinct"));
@@ -177,6 +177,14 @@ class CsvResultsWriterTest {
         for (String file : List.of("runs.csv", "generations.csv", "genotype-frequencies.csv")) {
             assertEquals(1, Files.readAllLines(directory.resolve(file)).size());
         }
+    }
+
+    @Test
+    void refusesExistingFilesBeforeWritingAnyTable() throws Exception {
+        Files.writeString(directory.resolve("generations.csv"), "preserve me");
+        assertThrows(java.nio.file.FileAlreadyExistsException.class, () -> CsvResultsWriter.write(directory,List.of(run())));
+        assertEquals("preserve me",Files.readString(directory.resolve("generations.csv")));
+        assertFalse(Files.exists(directory.resolve("runs.csv")));
     }
 
     private List<Map<String, String>> read(String file) throws Exception {

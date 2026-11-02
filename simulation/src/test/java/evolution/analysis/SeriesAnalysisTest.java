@@ -96,7 +96,7 @@ class SeriesAnalysisTest {
         var lines = Files.readAllLines(generations);
         Files.write(generations, lines.subList(0, lines.size() - 1));
         assertThrows(IOException.class, () -> SeriesAnalysis.read(directory));
-        export();
+        Files.write(generations, lines);
         Path genotypes = directory.resolve("genotype-frequencies.csv");
         var frequencies = Files.readAllLines(genotypes);
         Files.write(genotypes, frequencies.subList(0, frequencies.size() - 1));
@@ -107,9 +107,10 @@ class SeriesAnalysisTest {
     void rejectsDuplicateRunAndGenotypeRows() throws Exception {
         export();
         Path runs = directory.resolve("runs.csv");
+        String originalRuns = Files.readString(runs);
         Files.writeString(runs, Files.readAllLines(runs).get(1) + System.lineSeparator(), java.nio.file.StandardOpenOption.APPEND);
         assertThrows(IOException.class, () -> SeriesAnalysis.read(directory));
-        export();
+        Files.writeString(runs, originalRuns);
         Path genotypes = directory.resolve("genotype-frequencies.csv");
         Files.writeString(genotypes, Files.readAllLines(genotypes).get(1) + System.lineSeparator(), java.nio.file.StandardOpenOption.APPEND);
         assertThrows(IOException.class, () -> SeriesAnalysis.read(directory));

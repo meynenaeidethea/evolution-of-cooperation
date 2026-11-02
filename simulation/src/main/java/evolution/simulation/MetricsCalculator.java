@@ -13,6 +13,12 @@ final class MetricsCalculator {
     static GenerationMetrics measure(int generation, int ticks, WorldGrid grid,
                                      SimulationConfig config, long resources, long payoff,
                                      GameStatistics games) {
+        return measure(generation, ticks, grid, config, resources, payoff, games, 0, new long[4]);
+    }
+
+    static GenerationMetrics measure(int generation, int ticks, WorldGrid grid,
+                                     SimulationConfig config, long resources, long payoff,
+                                     GameStatistics games, long agentTicks, long[] uses) {
         var agents = grid.livingAgents();
         double average = agents.stream().mapToInt(Agent::energyHundredths).average().orElse(Double.NaN);
         double maximum = agents.stream().mapToDouble(Agent::energyHundredths).max().orElse(Double.NaN);
@@ -25,7 +31,7 @@ final class MetricsCalculator {
         return new GenerationMetrics(generation, agents.size(), average, resources, payoff, genotypes,
                 ticks, (double) agents.size() / config.populationSize(), maximum, games,
                 (double) resources / config.populationSize(), (double) payoff / config.populationSize(),
-                config.gamePayoffWeightHundredths() * payoff, spatialClustering(grid), agents.isEmpty());
+                config.gamePayoffWeightHundredths() * payoff, spatialClustering(grid), agents.isEmpty(), agentTicks, uses[0], uses[1], uses[2], uses[3]);
     }
 
     static double spatialClustering(WorldGrid grid) {

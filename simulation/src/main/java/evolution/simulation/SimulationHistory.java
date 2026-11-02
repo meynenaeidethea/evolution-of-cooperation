@@ -8,13 +8,29 @@ public final class SimulationHistory {
     private final List<SimulationSnapshot> snapshots = new ArrayList<>();
     private SimulationSession session;
     private int cursor;
+    private final int capacity;
+
+    public SimulationHistory(SimulationConfig config,long seed,int capacity) {
+        if (capacity < 2) throw new IllegalArgumentException("History capacity must be >= 2");
+        this.capacity=capacity;
+        newRun(config,seed);
+    }
+    public int capacity() { return capacity; }
+    public int nearestIndex(long elapsedTick) {
+        int best=0;
+        for(int i=1;i<snapshots.size();i++) if(Math.abs(snapshots.get(i).elapsedTicks()-elapsedTick)<Math.abs(snapshots.get(best).elapsedTicks()-elapsedTick)) best=i;
+        return best;
+    }
 
     public SimulationHistory(SimulationConfig config, long seed) {
-        newRun(config, seed);
+        this(config, seed, 300);
     }
 
     public void newRun(SimulationConfig config, long seed) {
-        SimulationSession next = new SimulationSession(config, seed);
+        newRun(config, seed, PairingMode.LOCAL);
+    }
+    public void newRun(SimulationConfig config,long seed,PairingMode mode) {
+        SimulationSession next = new SimulationSession(config, seed, mode);
         SimulationSnapshot initial = next.currentSnapshot();
         session = next;
         snapshots.clear();
@@ -50,6 +66,7 @@ public final class SimulationHistory {
             session.advance();
             snapshots.add(session.currentSnapshot());
             cursor++;
+            if (snapshots.size() > capacity) { snapshots.removeFirst(); cursor--; }
         }
         return currentSnapshot();
     }

@@ -14,7 +14,7 @@ import java.util.random.RandomGeneratorFactory;
 
 /** A forward-only run that owns its mutable world and exposes only detached snapshots. */
 public final class SimulationSession {
-    public static final String MODEL_VERSION = "genetic-v1";
+    public static final String MODEL_VERSION = "genetic-v2-controls";
     public static final String RANDOM_GENERATOR = "L64X128MixRandom";
     private final SimulationConfig config;
     private final PairingMode pairingMode;
@@ -29,6 +29,8 @@ public final class SimulationSession {
     private int tick;
     private long resourceEnergy;
     private long gamePayoff;
+    private long agentTicks;
+    private final long[] reactionUses = new long[4];
     private GameStatistics gameStatistics = GameStatistics.EMPTY;
     private String status = "running";
 
@@ -45,6 +47,8 @@ public final class SimulationSession {
         nextAgentId = phases.createInitialPopulation(grid, config, random, 1L);
     }
 
+    public long elapsedTicks() { return elapsedTicks; }
+
     public boolean isFinished() {
         return !status.equals("running");
     }
@@ -60,6 +64,8 @@ public final class SimulationSession {
             tick = 0;
             resourceEnergy = 0;
             gamePayoff = 0;
+            agentTicks = 0;
+            java.util.Arrays.fill(reactionUses, 0);
             gameStatistics = GameStatistics.EMPTY;
         }
         grid.regrowResources(config.resourceSpawnProbability(), random);
@@ -68,9 +74,11 @@ public final class SimulationSession {
         Map<Agent, Integer> resources = EnergyPhase.collectResourceEnergy(
                 grid, config.resourceEnergyHundredths());
         resourceEnergy += resources.values().stream().mapToLong(Integer::longValue).sum();
+        agentTicks += grid.livingAgents().size();
         var games = phases.playPairs(grid, config, random, pairingMode);
         gamePayoff += games.payoffs().values().stream().mapToLong(Integer::longValue).sum();
         gameStatistics = gameStatistics.plus(games.statistics());
+        for (int i = 0; i < 4; i++) reactionUses[i] += games.reactionUses()[i];
         EnergyPhase.applyEnergyAndRemoveDead(grid, resources, games.payoffs(), config);
         tick++;
         elapsedTicks++;
@@ -106,7 +114,7 @@ public final class SimulationSession {
 
     private GenerationMetrics currentMetrics() {
         return MetricsCalculator.measure(generation, tick, grid, config, resourceEnergy, gamePayoff,
-                gameStatistics);
+                gameStatistics, agentTicks, reactionUses);
     }
 
     public SimulationRunResult result() {
