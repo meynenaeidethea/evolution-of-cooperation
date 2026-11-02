@@ -1,0 +1,2 @@
+JavaFX scene, profile, seed validation, 320 ticks, history cap, replay, charts, frame export, speed/play/pause: PASS
+seconds=2.971046854

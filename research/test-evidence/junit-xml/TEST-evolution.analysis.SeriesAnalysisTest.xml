@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="evolution.analysis.SeriesAnalysisTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-10-20T20:58:14.012Z" hostname="fedora" time="0.491">
+  <properties/>
+  <testcase name="extinctionIsZeroPopulationButUndefinedCooperationAndEnergy()" classname="evolution.analysis.SeriesAnalysisTest" time="0.143"/>
+  <testcase name="rejectsDuplicateRunAndGenotypeRows()" classname="evolution.analysis.SeriesAnalysisTest" time="0.078"/>
+  <testcase name="identicalScenariosHaveZeroPairedEffectsAndAllGenotypes()" classname="evolution.analysis.SeriesAnalysisTest" time="0.148"/>
+  <testcase name="pairsByActualSeedRatherThanRepetitionOrRowOrder()" classname="evolution.analysis.SeriesAnalysisTest" time="0.03"/>
+  <testcase name="rejectsMissingGenerationAndMissingGenotypeRecords()" classname="evolution.analysis.SeriesAnalysisTest" time="0.036"/>
+  <testcase name="readsQuotedAndMultilineScenarioIds()" classname="evolution.analysis.SeriesAnalysisTest" time="0.013"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

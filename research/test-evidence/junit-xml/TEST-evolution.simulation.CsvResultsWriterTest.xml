@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="evolution.simulation.CsvResultsWriterTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-20T20:58:16.293Z" hostname="fedora" time="0.064">
+  <properties/>
+  <testcase name="escapesScenarioIdsAndRejectsDuplicateIdentitiesBeforeWriting()" classname="evolution.simulation.CsvResultsWriterTest" time="0.012"/>
+  <testcase name="emptySeriesStillWritesHeaders()" classname="evolution.simulation.CsvResultsWriterTest" time="0.003"/>
+  <testcase name="repeatsCsvBytesExactlyForSameScenarioParametersAndSeed()" classname="evolution.simulation.CsvResultsWriterTest" time="0.007"/>
+  <testcase name="exportsEmptyFieldsForUndefinedMetricsAfterExtinction()" classname="evolution.simulation.CsvResultsWriterTest" time="0.006"/>
+  <testcase name="exportsEveryParameterAndRunProvenance()" classname="evolution.simulation.CsvResultsWriterTest" time="0.005"/>
+  <testcase name="writesTheThreeSpecifiedCsvFiles()" classname="evolution.simulation.CsvResultsWriterTest" time="0.004"/>
+  <testcase name="exportsExtendedMetricsWithCorrectUnitsAndDenominators()" classname="evolution.simulation.CsvResultsWriterTest" time="0.007"/>
+  <testcase name="separatesScenariosWithSameSeedAndPreservesExplicitRepetitions()" classname="evolution.simulation.CsvResultsWriterTest" time="0.007"/>
+  <testcase name="refusesExistingFilesBeforeWritingAnyTable()" classname="evolution.simulation.CsvResultsWriterTest" time="0.004"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

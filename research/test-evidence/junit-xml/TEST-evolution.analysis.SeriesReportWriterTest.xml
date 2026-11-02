@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="evolution.analysis.SeriesReportWriterTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-20T20:58:14.568Z" hostname="fedora" time="1.45">
+  <properties/>
+  <testcase name="writesStandaloneHtmlPngAndReadableCsvWithoutChangingSource()" classname="evolution.analysis.SeriesReportWriterTest" time="1.269"/>
+  <testcase name="rendersExtinctionWithoutFakeZeroCooperation()" classname="evolution.analysis.SeriesReportWriterTest" time="0.173"/>
+  <testcase name="cliRejectsMalformedInputBeforeCreatingOutput()" classname="evolution.analysis.SeriesReportWriterTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

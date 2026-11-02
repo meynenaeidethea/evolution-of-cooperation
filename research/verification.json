@@ -1,0 +1,14 @@
+{
+  "final_source_replays_first_two_main_seeds": true,
+  "primary_checksums_verified": 2019,
+  "pilot_checksums_verified": 133,
+  "java_python_means_agree": true,
+  "java_python_paired_means_n_agree": true,
+  "largest_95ci_boundary_difference": 0.2811160122818066,
+  "largest_95ci_boundary_difference_by_metric": {
+    "survival": 0.00015625000000007994,
+    "cooperation": 0.0028287860727977954,
+    "energy": 0.2811160122818066
+  },
+  "parallel_sequential_csv_identical": true
+}

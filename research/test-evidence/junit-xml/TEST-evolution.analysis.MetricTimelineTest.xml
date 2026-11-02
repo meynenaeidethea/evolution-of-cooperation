@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="evolution.analysis.MetricTimelineTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-20T20:58:14.530Z" hostname="fedora" time="0.036">
+  <properties/>
+  <testcase name="extinctionKeepsMissingValuesAsGapsAndSurvivalAsZero()" classname="evolution.analysis.MetricTimelineTest" time="0.011"/>
+  <testcase name="retainsGenerationBoundariesAndUsesStableLeaderRanking()" classname="evolution.analysis.MetricTimelineTest" time="0.005"/>
+  <testcase name="rewindAndReplayRestoreExactlyTheSameTimelineAndNewRunClearsIt()" classname="evolution.analysis.MetricTimelineTest" time="0.004"/>
+  <testcase name="projectsPercentagesAndEnergyWithoutLookingPastCursor()" classname="evolution.analysis.MetricTimelineTest" time="0.005"/>
+  <testcase name="outputCollectionsAreDetachedAndCursorIsValidated()" classname="evolution.analysis.MetricTimelineTest" time="0.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

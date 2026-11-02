@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="evolution.simulation.SimulationSessionTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-10-20T20:58:16.666Z" hostname="fedora" time="0.012">
+  <properties/>
+  <testcase name="snapshotsAreDetachedAndDefensivelyCopyCollections()" classname="evolution.simulation.SimulationSessionTest" time="0.002"/>
+  <testcase name="oneAdvanceIsOneTickAndBoundaryPreservesParentsBeforeReproduction()" classname="evolution.simulation.SimulationSessionTest" time="0.002"/>
+  <testcase name="initialSnapshotIncludesResourcesUnderAgentsAndMetrics()" classname="evolution.simulation.SimulationSessionTest" time="0.002"/>
+  <testcase name="preservesPreStepApiBatchResultsForFixedSeed()" classname="evolution.simulation.SimulationSessionTest" time="0.002"/>
+  <testcase name="extinctionSnapshotHasNoDeadAgentsAndContainsDeathResources()" classname="evolution.simulation.SimulationSessionTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

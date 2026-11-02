@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="evolution.world.WorldGridTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-10-20T20:58:16.693Z" hostname="fedora" time="0.014">
+  <properties/>
+  <testcase name="rejectsPositionOutsideGrid()" classname="evolution.world.WorldGridTest" time="0.002"/>
+  <testcase name="doesNotRegrowNewResourcesWhenProbabilityIsZero()" classname="evolution.world.WorldGridTest" time="0.002"/>
+  <testcase name="allowsOnlyOneAgentInCell()" classname="evolution.world.WorldGridTest" time="0.002"/>
+  <testcase name="regrowsResourceOnEveryEmptyCellWhenProbabilityIsOne()" classname="evolution.world.WorldGridTest" time="0.001"/>
+  <testcase name="rejectsInvalidResourceSpawnProbability()" classname="evolution.world.WorldGridTest" time="0.001"/>
+  <testcase name="createsGridWithSpecifiedSideLength()" classname="evolution.world.WorldGridTest" time="0.001"/>
+  <testcase name="offersOnlyFreeToroidalNeighboursAndStayingInPlace()" classname="evolution.world.WorldGridTest" time="0.0"/>
+  <testcase name="rejectsGridSmallerThanSpecificationAllows()" classname="evolution.world.WorldGridTest" time="0.001"/>
+  <testcase name="resourceCanExistUnderAgentAndIsRemovedWhenTaken()" classname="evolution.world.WorldGridTest" time="0.001"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

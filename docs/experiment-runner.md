@@ -1,3 +1,5 @@
+> Этот документ описывает совместимый прежний runner runExperiments на пользовательском baseline. Новый зафиксированный runner runStudy использует внешние профили, отдельные seed и checkpoints: [README](../README.md).
+
 # Запуск серий экспериментов
 
 `ExperimentPlan` строит набор конфигураций на основе переданного `SimulationConfig`. `ExperimentSeriesRunner` последовательно выполняет независимые запуски через существующий `SimulationRunner` и экспортирует данные через `CsvResultsWriter`. Графическое окно и история снимков при этом не создаются.
