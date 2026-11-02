@@ -149,7 +149,7 @@ def summarize(source, output):
     (output / 'report.html').write_text(page, encoding='utf-8')
     (output / 'verification.json').write_text(json.dumps(dict(runs=1400, checksum_counts=counts,
         directions=directions, protocol_sha256=protocol_digest, analysis_source_sha256=hashlib.sha256(Path(__file__).read_bytes()).hexdigest()), indent=2) + '\n')
-    (output / 'protocol.sha256').write_text(protocol_digest + '  docs/robustness-protocol.md\\n')
+    (output / 'protocol.sha256').write_text(protocol_digest + '  docs/robustness-protocol.md\n')
     print(output / 'report.html')
 
 
