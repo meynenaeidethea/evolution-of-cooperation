@@ -90,7 +90,7 @@ public final class SimulationApplication extends Application {
         newRun.setOnAction(event -> newRun());
         seedError.setStyle("-fx-text-fill: #b42318;");
         heading.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
-        VBox top = new VBox(8, heading, new HBox(10, new Label("Seed:"), seed, newRun), new HBox(10, profile, profile.openButton(stage, this::newRun, seedError::setText), pairing, export), parameters, seedError);
+        VBox top = new VBox(8, heading, new HBox(10, new Label("Seed:"), seed, newRun), new FlowPane(10, 8, profile, profile.openButton(stage, this::newRun, seedError::setText), pairing, export), parameters, seedError);
         top.setPadding(new Insets(0, 0, 12, 0));
 
         StackPane map = new StackPane(world);

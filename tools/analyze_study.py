@@ -220,7 +220,7 @@ def genotype_color(g):
     i=int(g.replace('C','0').replace('D','1'),2)
     return colorsys.hsv_to_rgb((i*137.508%360)/360,.70,.85 if i%2==0 else .65)
 
-def render_genotypes(figdir,horizon,tr,genotype_means):
+def render_genotypes(figdir,horizon,tr,genotype_means,labels):
     fig,axs=plt.subplots(2,2,figsize=(13,8),layout='constrained')
     for ax,s in zip(axs.flat,['baseline','global-matched','mutation-zero','mutation-high']):
         if s not in tr:ax.axis('off');continue
@@ -228,13 +228,24 @@ def render_genotypes(figdir,horizon,tr,genotype_means):
         top=sorted(GENOTYPES,key=lambda g:(-last.get(g,0),g))[:5]
         ys=[[next(r['frequency'] for r in gg if r['generation']==g and r['genotype']==gt) for g in range(1,horizon+1)] for gt in top]
         ys.append(1-np.sum(ys,axis=0));ax.stackplot(range(1,horizon+1),ys,labels=top+['Остальные'],colors=[genotype_color(g) for g in top]+['#c9d2db'],alpha=.95)
-        ax.set(title=LABELS[s],xlabel='Поколение',ylabel='Средняя частота генотипов',ylim=(0,1));ax.legend(fontsize=8,loc='upper left',ncol=2)
+        ax.set(title=labels[s],xlabel='Поколение',ylabel='Средняя частота генотипов',ylim=(0,1));ax.legend(fontsize=8,loc='upper left',ncol=2)
     save(fig,figdir,'genotypes')
 
 def analyze(source,out,strict):
     run,gen,counts,by_s,horizon=load(source,strict);out.mkdir(parents=True,exist_ok=False)
     (out/'figures').mkdir();figdir=out/'figures'
     scenarios=list(by_s);endpoints=[];values={};end={};survival=[];trajectory=[]
+    labels={s:LABELS.get(s,s) for s in scenarios}
+    for s in scenarios:
+        if s.startswith(('rounds-', 'normalized-')):
+            m=by_s[s][0]
+            labels[s]=f"K={m['rounds_per_match']}, α={int(m['game_payoff_weight_hundredths'])/100:.2f}"
+    family_size=22 if strict else max(1,2*sum(s!='baseline' for s in scenarios))
+    scope=('Пилот отделён от основной серии. Первичные исходы: C и CCD?? в последнем поколении, '
+           '22 сравнения с baseline.' if strict else
+           f'Дополнительная или техническая серия. Сравнения описательные; поправка внутри отчёта '
+           f'учитывает {family_size} сравнений двух конечных показателей с baseline. '
+           'Это не общее подтверждающее семейство для всех исследуемых профилей.')
     for full,r in gen.items():values[full]=measures(r,counts[full],run[full[:2]])
     for s in scenarios:
         seeds=sorted(int(r['seed']) for r in by_s[s]);n=len(seeds)
@@ -276,7 +287,7 @@ def analyze(source,out,strict):
     for s,ref,metric,family in comparisons:
         pairs=sorted({seed for ss,seed in end if ss==s}&{seed for ss,seed in end if ss==ref})
         diff=[end[s,seed][metric]-end[ref,seed][metric] for seed in pairs]
-        n,mean,lo,hi=boot(diff);_,_,bl,bh=boot(diff,.05/22)
+        n,mean,lo,hi=boot(diff);_,_,bl,bh=boot(diff,.05/family_size)
         effects.append(dict(scenario=s,reference=ref,metric=metric,family=family,seed_pairs=len(pairs),n=n,mean=mean,
             low=lo,high=hi,simultaneous_low=bl if family=='primary' else math.nan,simultaneous_high=bh if family=='primary' else math.nan))
     write_csv(out/'endpoints.csv',endpoints);write_csv(out/'summary.csv',summary);write_csv(out/'effects.csv',effects)
@@ -302,7 +313,7 @@ def analyze(source,out,strict):
         for s in group:
             if s not in tr:continue
             rr=tr[s];x=[r['generation'] for r in rr]
-            ax.plot(x,[r['cooperation'] for r in rr],label=LABELS[s],color=COLORS[s])
+            ax.plot(x,[r['cooperation'] for r in rr],label=labels[s],color=COLORS[s])
             ax.fill_between(x,[r['cooperation_low'] for r in rr],[r['cooperation_high'] for r in rr],color=COLORS[s],alpha=.15)
         ax.set(ylim=(0,1),xlabel='Поколение',ylabel='Доля действий C');ax.legend(fontsize=8,loc='best');ax.grid(alpha=.2)
     axs.flat[-1].axis('off');axs.flat[-1].text(0,1,'Средние по независимым запускам\nПоточечные bootstrap 95% CI\nЧисло наблюдений — в trajectory.csv\nПолосы не одновременные',va='top',linespacing=1.8)
@@ -316,7 +327,7 @@ def analyze(source,out,strict):
             r=sm[s,metric]
             if np.isfinite(r['mean']):ax.errorbar(r['mean'],j,xerr=[[r['mean']-r['low']],[r['high']-r['mean']]],fmt='D',color='black',capsize=3,ms=4)
     for ax,title in zip(axs,['C во всех раундах','Условные генотипы CCD??']):
-        ax.set(yticks=range(len(scenarios)),yticklabels=[LABELS.get(s,s) for s in scenarios],xlim=(-.03,1.03),title=title,xlabel='Конечная доля; точки — seed, ромб — среднее и 95% CI');ax.invert_yaxis();ax.grid(axis='x',alpha=.2)
+        ax.set(yticks=range(len(scenarios)),yticklabels=[labels.get(s,s) for s in scenarios],xlim=(-.03,1.03),title=title,xlabel='Конечная доля; точки — seed, ромб — среднее и 95% CI');ax.invert_yaxis();ax.grid(axis='x',alpha=.2)
     save(fig,figdir,'endpoints')
     fig,axs=plt.subplots(1,2,figsize=(14,6),layout='constrained')
     for ax,metric in zip(axs,['cooperation','conditional']):
@@ -325,18 +336,18 @@ def analyze(source,out,strict):
             ax.plot([e['simultaneous_low'],e['simultaneous_high']],[j,j],color='#aab6be',lw=4)
             ax.plot([e['low'],e['high']],[j,j],color=COLORS[e['scenario']],lw=2)
             ax.plot(e['mean'],j,'o',color=COLORS[e['scenario']])
-        ax.axvline(0,color='black',lw=1);ax.set(yticks=range(len(ee)),yticklabels=[LABELS[e['scenario']] for e in ee],xlabel='Разность долей относительно baseline',title=metric+'; цвет 95%, серый Bonferroni');ax.invert_yaxis();ax.grid(axis='x',alpha=.2)
+        ax.axvline(0,color='black',lw=1);ax.set(yticks=range(len(ee)),yticklabels=[labels[e['scenario']] for e in ee],xlabel='Разность долей относительно baseline',title=metric+'; цвет 95%, серый Bonferroni');ax.invert_yaxis();ax.grid(axis='x',alpha=.2)
     save(fig,figdir,'effects')
     fig,axs=plt.subplots(1,3,figsize=(15,5),layout='constrained')
     for s in scenarios:
-        axs[0].plot([r['generation'] for r in tr[s]],[r['not_extinct'] for r in tr[s]],color=COLORS[s],label=LABELS.get(s,s),alpha=.85)
+        axs[0].plot([r['generation'] for r in tr[s]],[r['not_extinct'] for r in tr[s]],color=COLORS[s],label=labels.get(s,s),alpha=.85)
     axs[0].set(xlabel='Поколение',ylabel='Доля невымерших запусков',ylim=(-.03,1.03),title='Дожитие до горизонта')
     yy=np.arange(len(scenarios));sv=[sm[s,'survival'] for s in scenarios]
     axs[1].errorbar([r['mean'] for r in sv],yy,xerr=[[r['mean']-r['low'] for r in sv],[r['high']-r['mean'] for r in sv]],fmt='o',capsize=3)
-    axs[1].set(yticks=yy,yticklabels=[LABELS.get(s,s) for s in scenarios],xlabel='Доля живых агентов в G',xlim=(-.03,1.03),title='Выживание агентов, 95% CI');axs[1].invert_yaxis()
+    axs[1].set(yticks=yy,yticklabels=[labels.get(s,s) for s in scenarios],xlabel='Доля живых агентов в G',xlim=(-.03,1.03),title='Выживание агентов, 95% CI');axs[1].invert_yaxis()
     for j,r in enumerate(survival):
         axs[2].errorbar(r['risk'],j,xerr=[[r['risk']-r['low']],[r['high']-r['risk']]],fmt='o',color=COLORS[r['scenario']],capsize=3)
-    axs[2].set(yticks=yy,yticklabels=[LABELS.get(s,s) for s in scenarios],xlabel='Вероятность вымирания к G',title='Риск, Wilson 95% CI',xlim=(-.03,1.03));axs[2].invert_yaxis()
+    axs[2].set(yticks=yy,yticklabels=[labels.get(s,s) for s in scenarios],xlabel='Вероятность вымирания к G',title='Риск, Wilson 95% CI',xlim=(-.03,1.03));axs[2].invert_yaxis()
     save(fig,figdir,'survival')
     fig,axs=plt.subplots(1,3,figsize=(15,5),layout='constrained')
     for j,s in enumerate(scenarios):
@@ -344,7 +355,7 @@ def analyze(source,out,strict):
         axs[0].barh(j,res['mean'],color='#d1a33a');axs[0].barh(j,game['mean'],left=res['mean'],color=COLORS[s])
         for ax,metric in zip(axs[1:],['participation','energy']):
             r=sm[s,metric];ax.errorbar(r['mean'],j,xerr=[[r['mean']-r['low']],[r['high']-r['mean']]],fmt='o',color=COLORS[s],capsize=3)
-    for ax in axs:ax.set(yticks=range(len(scenarios)),yticklabels=[LABELS.get(s,s) for s in scenarios]);ax.invert_yaxis();ax.grid(axis='x',alpha=.15)
+    for ax in axs:ax.set(yticks=range(len(scenarios)),yticklabels=[labels.get(s,s) for s in scenarios]);ax.invert_yaxis();ax.grid(axis='x',alpha=.15)
     axs[0].set(title='Доход за последнее поколение',xlabel='Энергия / начальный агент; золото — ресурс')
     axs[1].set(title='Охват встреч, 95% CI',xlabel='Участия / живой агент-такт',xlim=(0,1.03))
     axs[2].set(title='Энергия живых, 95% CI',xlabel='Обычные единицы энергии')
@@ -356,18 +367,18 @@ def analyze(source,out,strict):
             if metric=='clustering':
                 x=range(1,horizon+1); yy=[finite_mean([values[s,int(r['seed']),g][metric] for r in by_s[s] if (s,int(r['seed']),g) in values]) for g in x]
             else:x=[r['generation'] for r in tr[s]];yy=[r[metric] for r in tr[s]]
-            ax.plot(x,yy,label=LABELS[s],color=COLORS[s])
+            ax.plot(x,yy,label=labels[s],color=COLORS[s])
     for ax,title in zip(axs.flat,['Доля CCD??','Shannon H / ln(32)','Доля одинаковых соседей','Избыток над случайной перестановкой']):
         ax.set(xlabel='Поколение',ylabel=title);ax.legend(fontsize=8);ax.grid(alpha=.2)
     save(fig,figdir,'composition')
-    render_genotypes(figdir,horizon,tr,genotype_means)
+    render_genotypes(figdir,horizon,tr,genotype_means,labels)
     fig,axs=plt.subplots(1,2,figsize=(13,5),layout='constrained')
     for ax,ss in zip(axs,[['baseline','global','global-matched'],['rounds-1','normalized-1','baseline','rounds-10','normalized-10']]):
         present=[s for s in ss if s in by_s]
         for metric,mark in [('cooperation','o'),('conditional','s')]:
             for j,s in enumerate(present):
                 r=sm[s,metric];ax.errorbar(j+(-.08 if mark=='o' else .08),r['mean'],yerr=[[r['mean']-r['low']],[r['high']-r['mean']]],fmt=mark,color=COLORS[s],capsize=4)
-        ax.set(xticks=range(len(present)),xticklabels=[LABELS[s] for s in present],ylim=(-.03,1.03),ylabel='Доля; круг C, квадрат CCD??');ax.tick_params(axis='x',rotation=25);ax.grid(axis='y',alpha=.2)
+        ax.set(xticks=range(len(present)),xticklabels=[labels[s] for s in present],ylim=(-.03,1.03),ylabel='Доля; круг C, квадрат CCD??');ax.tick_params(axis='x',rotation=25);ax.grid(axis='y',alpha=.2)
     axs[0].set_title('Локальность и бюджет встреч');axs[1].set_title('Обычный и нормированный K')
     save(fig,figdir,'controls')
     # Gene expression is a count of actual decisions, not genotype frequencies.
@@ -380,7 +391,7 @@ def analyze(source,out,strict):
         left=0
         for j,(name,color) in enumerate(zip(['CC','CD','DC','DD'],['#3f7e44','#de9b42','#8064aa','#515b66'])):
             ax.barh(scenarios.index(s),fractions[j],left=left,color=color,label=name if s==scenarios[0] else None);left+=fractions[j]
-    ax.set(yticks=range(len(scenarios)),yticklabels=[LABELS.get(s,s) for s in scenarios],xlabel='Доля всех использований условных генов (объединённые счётчики)',xlim=(0,1));ax.invert_yaxis();ax.legend(ncol=4)
+    ax.set(yticks=range(len(scenarios)),yticklabels=[labels.get(s,s) for s in scenarios],xlabel='Доля всех использований условных генов (объединённые счётчики)',xlim=(0,1));ax.invert_yaxis();ax.legend(ncol=4)
     save(fig,figdir,'gene-expression');write_csv(out/'gene-usage.csv',usage)
     # Results fragment links every rounded claim to machine-readable estimates.
     def fmt(x):return '—' if not np.isfinite(x) else f'{x:.3f}'
@@ -392,11 +403,12 @@ def analyze(source,out,strict):
         lines.append(f"| {s} | {fmt(c['mean'])} [{fmt(c['low'])}; {fmt(c['high'])}] | {fmt(q['mean'])} [{fmt(q['low'])}; {fmt(q['high'])}] | {fmt(v['mean'])} | {c['n']} |")
     lines+=['','Частоты — доли, разности — разности долей (×100 для процентных пунктов).',
             'Все значения: summary.csv; парные разности: effects.csv; отдельные seed: endpoints.csv.',
-            'Первичное семейство: 22 сравнения. simultaneous_* — приближённые Bonferroni bootstrap CI.',
+            f'Семейство внутри отчёта: {family_size} сравнений. simultaneous_* — приближённые Bonferroni bootstrap CI.',
             '95% CI в рисунках описательные; отсутствие обнаруженного отличия не доказывает эквивалентность.',
             'C и генотипные частоты условны на сохранение популяции. После вымирания выживаемость равна 0, остальные конечные показатели неопределены.']
     (out/'results.md').write_text('\n'.join(lines)+'\n',encoding='utf-8')
-    metadata={'source':str(source.resolve()),'runs':len(run),'generations':len(gen),'resamples':B,'analysis_seed':ANALYSIS_SEED,
+    metadata={'source':str(source.resolve()),'runs':len(run),'generations':len(gen),'resamples':B,'analysis_seed':ANALYSIS_SEED,'family_size':family_size,
+              'analysis_source_sha256':hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
               'python':sys.version,'numpy':np.__version__,'matplotlib':matplotlib.__version__,'platform':platform.platform(),
               'input_sha256':{p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in [source/'runs.csv',source/'generations.csv',source/'genotype-frequencies.csv']}}
     (out/'analysis.json').write_text(json.dumps(metadata,ensure_ascii=False,indent=2))
@@ -404,7 +416,7 @@ def analyze(source,out,strict):
     table='<table><tr><th>Сценарий</th><th>C, 95% CI</th><th>CCD??, 95% CI</th><th>n</th></tr>'
     for s in scenarios:
         c,q=sm[s,'cooperation'],sm[s,'conditional']
-        table+=f"<tr><td>{html.escape(LABELS.get(s,s))}</td><td>{fmt(c['mean'])} [{fmt(c['low'])}; {fmt(c['high'])}]</td><td>{fmt(q['mean'])} [{fmt(q['low'])}; {fmt(q['high'])}]</td><td>{c['n']}</td></tr>"
+        table+=f"<tr><td>{html.escape(labels.get(s,s))}</td><td>{fmt(c['mean'])} [{fmt(c['low'])}; {fmt(c['high'])}]</td><td>{fmt(q['mean'])} [{fmt(q['low'])}; {fmt(q['high'])}]</td><td>{c['n']}</td></tr>"
     table+='</table>'
     params='<table><tr>'+''.join('<th>'+x+'</th>' for x in ['scenario','K','α','μ','q','pairing'])+'</tr>'
     for s in scenarios:
@@ -417,7 +429,7 @@ def analyze(source,out,strict):
 <p>Модель genetic-v2-controls, схема 2. Полные параметры и окружение: <a href="../{html.escape(source.name)}/manifest.txt">manifest</a> (если каталоги рядом); <a href="analysis.json">отпечатки входных CSV и версии анализа</a>. L={by_s[scenarios[0]][0]['side_length']}, N={by_s[scenarios[0]][0]['population_size']}, T={by_s[scenarios[0]][0]['ticks_per_generation']}.</p>
 {params}<h2>Конечная точка</h2>{table}<p>Средние запусков, percentile bootstrap 20000 повторов, 95% CI. Узкая категория CCD??: первый C, C после CC, D после CD. Она отличается от доли действий C.</p>
 <p><a href="summary.csv">Оценки</a> · <a href="effects.csv">Парные эффекты и Bonferroni</a> · <a href="endpoints.csv">Все seed</a> · <a href="trajectory.csv">Динамика и эффективное n</a> · <a href="extinction.csv">Вымирание</a> · <a href="strategy-catalogue.csv">Все 32 стратегии</a> · <a href="standard-matches.csv">1024 стандартные встречи</a> · <a href="behavioral-equivalence.csv">Поведенческая эквивалентность</a></p>
-<h2>Методика и ограничения</h2><p>Пилот отделён от основной серии. Первичные исходы: C и CCD?? в последнем поколении, 22 сравнения с baseline. Серые интервалы эффектов используют поправку Bonferroni; покрытие bootstrap приближённое. Динамические полосы поточечные, не одновременные. Другие показатели описательные. Нет p-значений и утверждений об эквивалентности.</p>
+<h2>Методика и ограничения</h2><p>{scope} Серые интервалы эффектов используют поправку Bonferroni; покрытие bootstrap приближённое. Динамические полосы поточечные, не одновременные. Другие показатели описательные. Нет p-значений и утверждений об эквивалентности.</p>
 <p>После вымирания S/N=0, C и энергия неопределены. Эффективное n и число пар записаны в таблицах. Глобальный бюджет равен числу локальных пар в собственном текущем мире, а не во внешней контрольной траектории; выбор участников также меняется. Нормировка αK=1 контролирует масштаб выплаты, но не поведенческую последовательность. Память фиксирована одним раундом. Случайное расселение каждого поколения ограничивает наследование пространственных кластеров.</p>
 {body}<h2>Прослеживаемость</h2><p>Все численные значения восстановимы из трёх входных CSV. Графики и таблицы не используют данные пилота. Полный протокол и пояснительная записка находятся в docs проекта. Карты отдельного seed — только иллюстрации; статистика выше основана на всех запусках.</p></html>'''
     (out/'report.html').write_text(report,encoding='utf-8')

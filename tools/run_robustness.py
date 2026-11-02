@@ -4,6 +4,7 @@ import argparse
 import json
 import re
 import subprocess
+import tempfile
 from pathlib import Path
 
 from analyze_study import load
@@ -32,9 +33,15 @@ def run(label, resume):
             subprocess.run(['./gradlew', ':simulation:runStudy', '--args=' + ' '.join(options)], check=True)
         load(data)  # Always validate completed data, including resume invocations.
         if not report.exists():
-            subprocess.run(['python3', 'tools/analyze_study.py', '--input', str(data), '--output', str(report)], check=True)
+            pending = Path(tempfile.mkdtemp(prefix='.analysis-', dir=root)) / 'report'
+            subprocess.run(['python3', 'tools/analyze_study.py', '--input', str(data), '--output', str(pending)], check=True)
+            pending.rename(report)
+            pending.parent.rmdir()
         if not materials.exists():
-            assemble(report, data, None, materials)
+            pending = Path(tempfile.mkdtemp(prefix='.materials-', dir=root)) / 'report'
+            assemble(report, data, None, pending)
+            pending.rename(materials)
+            pending.parent.rmdir()
         else:
             import hashlib
             info = json.loads((materials / 'analysis.json').read_text())

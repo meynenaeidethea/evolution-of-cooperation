@@ -25,6 +25,8 @@ final class ProfileSelector extends HBox {
         add(Path.of("profiles/user.properties"), "Пользовательский");
         add(Path.of("profiles/research.properties"), "Исследование");
         add(Path.of("profiles/demo.properties"), "Демонстрация");
+        choices.setPrefWidth(240);
+        choices.setMaxWidth(280);
         choices.getSelectionModel().selectFirst();
         getChildren().addAll(new Label("Профиль:"), choices);
     }
@@ -45,6 +47,7 @@ final class ProfileSelector extends HBox {
                     return custom;
                 });
         choices.setValue(choice);
+        choices.setTooltip(new javafx.scene.control.Tooltip(absolute.toString()));
     }
 
     Button openButton(Window owner, Runnable startRun, Consumer<String> error) {

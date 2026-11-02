@@ -117,7 +117,7 @@ final class StudyStorage {
         try (var paths = Files.walk(out)) {
             for (Path p : paths.filter(Files::isRegularFile).sorted().toList()) {
                 Path relative = out.relativize(p);
-                if (p.getFileName().toString().equals("SHA256SUMS") || p.getFileName().toString().equals(".lock")
+                if (p.getFileName().toString().equals("SHA256SUMS") || p.getFileName().toString().equals(".lock") || p.getFileName().toString().equals(".completion-pending")
                         || relative.toString().contains(".pending-") || relative.toString().contains(".merge-")) continue;
                 lines.add(digest(p) + "  " + relative);
             }

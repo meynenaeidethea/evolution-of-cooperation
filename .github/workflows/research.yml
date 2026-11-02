@@ -3,6 +3,11 @@ on:
   push:
   pull_request:
   workflow_dispatch:
+    inputs:
+      full_study:
+        description: Run the complete original 480-run reproduction
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
@@ -28,11 +33,15 @@ jobs:
         run: |
           python tools/analyze_study.py --input results/ci-smoke --output results/ci-report
           python tools/analyze_study.py --input results/ci-extinct --output results/ci-extinct-report
+      - name: Assemble a portable report from the short series
+        run: python tools/finalize_materials.py --report results/ci-report --data results/ci-smoke --output results/ci-materials
       - name: Estimator and data integrity tests
         env:
           STUDY_TEST_INPUT: results/ci-smoke
           STUDY_EXTINCTION_REPORT: results/ci-extinct-report
         run: python -m unittest discover -s tools -p 'test_*.py'
+      - name: Install JavaFX display dependencies
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0
       - name: Test real JavaFX scene
         run: xvfb-run -a ./gradlew :simulation:runVisual --args='--smoke-dir=results/ci-ui'
       - uses: actions/upload-artifact@v4
@@ -41,6 +50,31 @@ jobs:
           path: |
             simulation/build/reports/tests
             results/ci-report
+            results/ci-materials
             results/ci-extinct-report
             results/ci-ui
           retention-days: 14
+
+  full-study:
+    if: github.event_name == 'workflow_dispatch' && inputs.full_study
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+      - run: python -m pip install -r tools/requirements-analysis.txt
+      - run: bash tools/reproduce.sh ci-full
+      - uses: actions/upload-artifact@v4
+        with:
+          name: complete-study
+          path: |
+            archives/ci-full.tar.gz
+            archives/ci-full.tar.gz.sha256
+          retention-days: 30
