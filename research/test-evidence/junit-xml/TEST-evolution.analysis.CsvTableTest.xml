@@ -1,8 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="evolution.analysis.CsvTableTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-10-20T20:58:14.518Z" hostname="fedora" time="0.011">
-  <properties/>
-  <testcase name="readsBomCrLfEscapedQuotesAndEmptyLastCell()" classname="evolution.analysis.CsvTableTest" time="0.003"/>
-  <testcase name="rejectsMalformedQuotesDuplicateHeadersAndTruncatedRows()" classname="evolution.analysis.CsvTableTest" time="0.007"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

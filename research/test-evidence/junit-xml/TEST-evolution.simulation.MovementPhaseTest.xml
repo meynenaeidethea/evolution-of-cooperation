@@ -1,9 +1,0 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="evolution.simulation.MovementPhaseTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-10-20T20:58:16.500Z" hostname="fedora" time="0.005">
-  <properties/>
-  <testcase name="choosesOneFreeSnapshotTargetForEachAgentWithoutMovingThem()" classname="evolution.simulation.MovementPhaseTest" time="0.002"/>
-  <testcase name="rejectsExchangeOfCellsOccupiedAtPhaseStart()" classname="evolution.simulation.MovementPhaseTest" time="0.001"/>
-  <testcase name="resolvesAContestedTargetWithExactlyOneWinner()" classname="evolution.simulation.MovementPhaseTest" time="0.0"/>
-  <system-out><![CDATA[]]></system-out>
-  <system-err><![CDATA[]]></system-err>
-</testsuite>

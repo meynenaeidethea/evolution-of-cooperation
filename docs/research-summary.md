@@ -17,4 +17,4 @@
 
 **Границы вывода:** один размер мира и конечный горизонт; нет эволюции памяти, устойчивости к вторжению, наследования пространственных кластеров и доказательства эквивалентности режимов.
 
-**Готовые материалы:** [записка](research-paper.md), [HTML-отчёт](../research/study-20261020/report.html), [протокол](research-protocol.md), [защита](defense.md), [проверки](verification.md). Полные исходные данные, параметры и исходники находятся в локальном архиве, указанном в README. Все числа прослеживаются до `summary.csv`, `effects.csv` и `endpoints.csv`.
+**Готовые материалы:** [записка](research-paper.md), [HTML-отчёт](https://github.com/meynenaeidethea/evolution-of-cooperation/releases/download/research-data-20261102/cooperation-study-20261020.tar.gz), [протокол](research-protocol.md), [защита](defense.md), [проверки](verification.md). Полные исходные данные, параметры и исходники находятся в локальном архиве, указанном в README. Все числа прослеживаются до `summary.csv`, `effects.csv` и `endpoints.csv`.

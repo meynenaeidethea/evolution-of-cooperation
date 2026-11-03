@@ -1,4 +1,0 @@
-tick=300 snapshots=300 retained_heap_bytes=35674512
-tick=600 snapshots=300 retained_heap_bytes=39124872
-tick=900 snapshots=300 retained_heap_bytes=39769840
-tick=1200 snapshots=300 retained_heap_bytes=35762552

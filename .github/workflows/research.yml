@@ -42,6 +42,8 @@ jobs:
         run: python -m unittest discover -s tools -p 'test_*.py'
       - name: Install JavaFX display dependencies
         run: sudo apt-get update && sudo apt-get install -y xvfb libgtk-3-0
+      - name: Record a complete run without the UI
+        run: ./gradlew :simulation:recordSimulation --args='--profile profiles/demo.properties --seed 800001 --pairing GLOBAL_MATCHED --output results/ci-recorded.eoc'
       - name: Test real JavaFX scene
         run: xvfb-run -a ./gradlew :simulation:runVisual --args='--smoke-dir=results/ci-ui'
       - uses: actions/upload-artifact@v4
@@ -53,6 +55,7 @@ jobs:
             results/ci-materials
             results/ci-extinct-report
             results/ci-ui
+            results/ci-recorded.eoc
           retention-days: 14
 
   full-study:
