@@ -53,4 +53,4 @@ Seed 20001–20080; для пяти измененных профилей 20001�
 Оценки разных профилей и исходной/новой групп здесь не объединяются. Проверка не доказывает эволюционную устойчивость, отсутствие эффектов или эквивалентность режимов.
 
 Полные оценки: [robustness-summary.csv](robustness-summary.csv), [robustness-effects.csv](robustness-effects.csv).
-Первичные CSV, точные исходники и подробные отчеты входят в архив robustness-study-20261102.tar.gz в отдельной ветке datasets/research-20261102 на GitHub.
+Первичные CSV, точные исходники и подробные отчеты входят в архив robustness-study-20261102.tar.gz в [GitHub Release](https://github.com/meynenaeidethea/evolution-of-cooperation/releases/tag/research-data-20261102).

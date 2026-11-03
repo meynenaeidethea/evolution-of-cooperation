@@ -1,6 +1,7 @@
 package evolution.simulation;
 
 import evolution.game.Genotype;
+import evolution.game.GameStatistics;
 import evolution.world.CellPosition;
 
 import java.util.List;
@@ -21,5 +22,11 @@ public record SimulationSnapshot(
     /** Resource energy and raw game payoff accumulate within the displayed generation. */
     public record Metrics(int livingAgents, double averageEnergyHundredths, int resourceCount,
                           long resourceEnergyHundredths, long gamePayoff,
-                          GenerationMetrics generationMetrics) {}
+                          GenerationMetrics generationMetrics, TickMetrics lastTick) {}
+
+    /** Flows during exactly the displayed tick, including games played by agents that died. */
+    public record TickMetrics(long resourceEnergyHundredths, long gamePayoff,
+                              GameStatistics gameStatistics, int deaths) {
+        public static final TickMetrics EMPTY = new TickMetrics(0, 0, GameStatistics.EMPTY, 0);
+    }
 }

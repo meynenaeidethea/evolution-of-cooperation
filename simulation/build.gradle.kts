@@ -101,3 +101,12 @@ tasks.register<JavaExec>("exportStudyFrames") {
     workingDir = rootProject.layout.projectDirectory.asFile
     jvmArgs("-Djava.awt.headless=true")
 }
+
+tasks.register<JavaExec>("recordSimulation") {
+    group = "application"
+    description = "Record every tick of one run to an .eoc replay (use --args='--help')"
+    classpath = sourceSets.main.get().runtimeClasspath
+    mainClass = "evolution.replay.RecordMain"
+    workingDir = rootProject.layout.projectDirectory.asFile
+    jvmArgs("-Xmx768m", "-Djava.awt.headless=true")
+}
