@@ -32,6 +32,7 @@ public final class SimulationSession {
     private long agentTicks;
     private final long[] reactionUses = new long[4];
     private GameStatistics gameStatistics = GameStatistics.EMPTY;
+    private SimulationSnapshot.TickMetrics lastTick = SimulationSnapshot.TickMetrics.EMPTY;
     private String status = "running";
 
     public SimulationSession(SimulationConfig config, long seed) {
@@ -73,13 +74,18 @@ public final class SimulationSession {
         MovementPhase.resolveAndApply(grid, intents, random);
         Map<Agent, Integer> resources = EnergyPhase.collectResourceEnergy(
                 grid, config.resourceEnergyHundredths());
-        resourceEnergy += resources.values().stream().mapToLong(Integer::longValue).sum();
+        long tickResources = resources.values().stream().mapToLong(Integer::longValue).sum();
+        resourceEnergy += tickResources;
         agentTicks += grid.livingAgents().size();
         var games = phases.playPairs(grid, config, random, pairingMode);
-        gamePayoff += games.payoffs().values().stream().mapToLong(Integer::longValue).sum();
+        long tickPayoff = games.payoffs().values().stream().mapToLong(Integer::longValue).sum();
+        gamePayoff += tickPayoff;
         gameStatistics = gameStatistics.plus(games.statistics());
         for (int i = 0; i < 4; i++) reactionUses[i] += games.reactionUses()[i];
+        int beforeDeaths = grid.livingAgents().size();
         EnergyPhase.applyEnergyAndRemoveDead(grid, resources, games.payoffs(), config);
+        lastTick = new SimulationSnapshot.TickMetrics(tickResources, tickPayoff,
+                games.statistics(), beforeDeaths - grid.livingAgents().size());
         tick++;
         elapsedTicks++;
         if (grid.livingAgents().isEmpty() || tick == config.ticksPerGeneration()) {
@@ -109,7 +115,7 @@ public final class SimulationSession {
                 .average().orElse(Double.NaN);
         return new SimulationSnapshot(config.sideLength(), seed, generation, tick, elapsedTicks,
                 status, agents, resources, new SimulationSnapshot.Metrics(agents.size(), average,
-                resources.size(), resourceEnergy, gamePayoff, currentMetrics()));
+                resources.size(), resourceEnergy, gamePayoff, currentMetrics(), lastTick));
     }
 
     private GenerationMetrics currentMetrics() {

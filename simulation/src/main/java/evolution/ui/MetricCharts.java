@@ -28,7 +28,7 @@ final class MetricCharts extends GridPane {
     private final Plot genotypes;
 
     MetricCharts(LongConsumer selectTick) {
-        cooperation = new Plot("Сотрудничество, %", true, selectTick);
+        cooperation = new Plot("Сотрудничество за поколение, %", true, selectTick);
         survival = new Plot("Выживаемость, %", true, selectTick);
         energy = new Plot("Средняя энергия", false, selectTick);
         genotypes = new Plot("Частоты ведущих генотипов, %", true, selectTick);
@@ -96,7 +96,8 @@ final class MetricCharts extends GridPane {
             canvas.setOnMouseClicked(event -> {
                 if (data == null || event.getX() < LEFT || event.getX() > canvas.getWidth() - RIGHT) return;
                 double fraction = (event.getX() - LEFT) / (canvas.getWidth() - LEFT - RIGHT);
-                selectTick.accept(Math.round(fraction * data.selectedTick()));
+                long first = data.energy().points().getFirst().tick();
+                selectTick.accept(first + Math.round(fraction * (data.selectedTick() - first)));
             });
         }
 
@@ -127,7 +128,8 @@ final class MetricCharts extends GridPane {
             double plotHeight = height - TOP - BOTTOM;
             double maximum = percent ? 100 : Math.max(1, series.stream().flatMap(s -> s.points().stream())
                     .mapToDouble(MetricTimeline.Point::value).filter(Double::isFinite).max().orElse(1) * 1.1);
-            long lastTick = Math.max(1, data.selectedTick());
+            long firstTick = data.energy().points().getFirst().tick();
+            long tickSpan = Math.max(1, data.selectedTick() - firstTick);
             graphics.setFont(Font.font(10));
             graphics.setLineWidth(0.7);
             graphics.setLineDashes();
@@ -140,10 +142,10 @@ final class MetricCharts extends GridPane {
             }
             long previousLabel = -1;
             for (int i = 0; i <= 2; i++) {
-                long tick = Math.round(data.selectedTick() * i / 2.0);
+                long tick = firstTick + Math.round((data.selectedTick()-firstTick) * i / 2.0);
                 if (tick == previousLabel) continue;
                 previousLabel = tick;
-                double x = LEFT + plotWidth * tick / lastTick;
+                double x = LEFT + plotWidth * (tick-firstTick) / tickSpan;
                 graphics.fillText(Long.toString(tick), x - 6,
                         height - BOTTOM + 15);
             }
@@ -151,7 +153,7 @@ final class MetricCharts extends GridPane {
             graphics.setStroke(Color.web("#94a3b8"));
             graphics.setLineDashes(3, 4);
             for (long tick : data.generationStarts()) {
-                double x = LEFT + plotWidth * tick / lastTick;
+                double x = LEFT + plotWidth * (tick-firstTick) / tickSpan;
                 graphics.strokeLine(x, TOP, x, height - BOTTOM);
             }
             graphics.setLineDashes();
@@ -167,10 +169,10 @@ final class MetricCharts extends GridPane {
                         continue;
                     }
                     hasValues = true;
-                    double x = LEFT + plotWidth * point.tick() / lastTick;
+                    double x = LEFT + plotWidth * (point.tick()-firstTick) / tickSpan;
                     double y = TOP + plotHeight * (1 - point.value() / maximum);
                     if (previous != null && previous.generation() == point.generation()) {
-                        graphics.strokeLine(LEFT + plotWidth * previous.tick() / lastTick,
+                        graphics.strokeLine(LEFT + plotWidth * (previous.tick()-firstTick) / tickSpan,
                                 TOP + plotHeight * (1 - previous.value() / maximum), x, y);
                     }
                     if (previous == null || previous.generation() != point.generation()

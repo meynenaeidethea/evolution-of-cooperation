@@ -1,6 +1,6 @@
 # Материалы защиты
 
-[Записка](research-paper.md) · [Отчёт](../research/study-20261020/report.html) · [Краткое резюме](research-summary.md).
+[Записка](research-paper.md) · [Отчёт](https://github.com/meynenaeidethea/evolution-of-cooperation/releases/download/research-data-20261102/cooperation-study-20261020.tar.gz) · [Краткое резюме](research-summary.md).
 
 ## Выступление на 7–10 минут
 

@@ -91,7 +91,7 @@ def summarize(source, output):
         lines.append(f'- {scenario}: положительная оценка в {d["positive"]}/{d["profiles"]} профилях, '
                      f'отрицательная в {d["negative"]}/{d["profiles"]}; описательный CI целиком выше нуля '
                      f'в {d["ci_above_zero"]}, ниже нуля в {d["ci_below_zero"]}.')
-    original = rows(Path('research/study-20261020/summary.csv'))
+    original = rows(Path('docs/results/main-summary.csv'))
     old = next(r for r in original if r['scenario'] == 'baseline' and r['metric'] == 'cooperation')
     new = means['reference', 'baseline', 'cooperation']
     lines += ['', f'Новая независимая группа baseline: {fmt(new)}, прежняя группа: {fmt(old)}. '
