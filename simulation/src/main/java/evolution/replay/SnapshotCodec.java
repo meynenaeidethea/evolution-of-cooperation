@@ -41,7 +41,8 @@ final class SnapshotCodec {
         int side=d.readInt(); long seed=d.readLong(); int generation=d.readInt(), tick=d.readInt();
         long elapsed=d.readLong(); String status=d.readUTF();
         if (side<3 || !Set.of("running","completed","extinct").contains(status)) throw new IOException("Invalid snapshot header");
-        int cells=(int)Math.min(2_000_000L,(long)side*side);
+        // ReplayFile already bounds the decoded frame size. Counts here are limited by the grid.
+        int cells=(int)Math.min(Integer.MAX_VALUE,(long)side*side);
         int count=count(d,cells); var agents=new ArrayList<SimulationSnapshot.AgentState>();
         for(int i=0;i<count;i++) {
             long id=d.readLong(); var p=position(d,side); int energy=d.readInt();
